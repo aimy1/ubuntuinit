@@ -118,13 +118,13 @@ echo -e "  ${C_CYN}${BOLD}设置执行权限...${R}"
 chmod +x "${UBINIT_SCRIPT}"
 log_ok "ubinit 已设为可执行"
 
-chmod +x "${SCRIPT_DIR}/ubuntu-init/install.sh"
-chmod +x "${SCRIPT_DIR}/ubuntu-init/uninstall.sh"
+chmod +x "${SCRIPT_DIR}/install.sh"
+chmod +x "${SCRIPT_DIR}/uninstall.sh"
 log_ok "install.sh / uninstall.sh 已设为可执行"
 
 # lib 目录
-find "${SCRIPT_DIR}/ubuntu-init/lib"     -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
-find "${SCRIPT_DIR}/ubuntu-init/modules" -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
+find "${SCRIPT_DIR}/lib"     -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
+find "${SCRIPT_DIR}/modules" -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
 log_ok "lib/ 和 modules/ 已批量设为可执行"
 
 # games 目录
