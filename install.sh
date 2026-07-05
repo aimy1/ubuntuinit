@@ -404,28 +404,15 @@ run_all_modules() {
 # =============================================================================
 
 # 运行 TUI 菜单，让用户选择要安装的模块
-# 返回: 0=用户选择了模块  1=用户选择退出
 run_interactive_menu() {
     log_info "进入交互模式..."
     local selected
     selected="$(ui_main_menu)" || {
         log_info "用户取消，退出"
-        return 1
+        exit 0
     }
     UBINIT_SELECTED_MODULES="${selected}"
     export UBINIT_SELECTED_MODULES
-    return 0
-}
-
-# 等待用户按键返回菜单
-_wait_return_to_menu() {
-    echo ""
-    printf "  ${UI_C_MUTED}按 Enter 返回主菜单，按 q 退出程序${UI_C_RESET}" >&2
-    read -r -n 1 -s key
-    if [[ "${key}" == "q" || "${key}" == "Q" ]]; then
-        return 1
-    fi
-    return 0
 }
 
 # =============================================================================
@@ -506,38 +493,16 @@ main() {
     # 加载配置
     load_config
 
-    # 交互模式：循环显示菜单，让用户可以多次选择模块
+    # 交互模式：弹出菜单让用户选择模块
     if [[ "${UBINIT_NON_INTERACTIVE}" == "false" && -z "${UBINIT_SELECTED_MODULES}" ]]; then
-        while true; do
-            # 显示菜单让用户选择模块
-            if ! run_interactive_menu; then
-                # 用户选择退出
-                break
-            fi
-
-            # 执行所有选定模块
-            run_all_modules
-
-            # 生成安装报告
-            report_generate
-
-            # 等待用户选择返回菜单或退出
-            if ! _wait_return_to_menu; then
-                # 用户选择退出
-                break
-            fi
-
-            # 清空选定模块列表，准备下一次循环
-            UBINIT_SELECTED_MODULES=""
-            UBINIT_SUCCESS_MODULES=()
-            UBINIT_SKIPPED_MODULES=()
-            UBINIT_FAILED_MODULES=()
-        done
-    else
-        # 非交互模式：直接执行模块
-        run_all_modules
-        report_generate
+        run_interactive_menu
     fi
+
+    # 执行所有选定模块
+    run_all_modules
+
+    # 生成安装报告
+    report_generate
 
     return 0
 }
