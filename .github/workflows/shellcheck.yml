@@ -1,0 +1,41 @@
+name: ShellCheck
+
+on:
+  push:
+    branches: [ main, master, develop ]
+    paths:
+      - '**.sh'
+      - 'ubinit'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - '**.sh'
+      - 'ubinit'
+
+jobs:
+  shellcheck:
+    name: ShellCheck 代码质量检查
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 安装 ShellCheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y shellcheck
+          shellcheck --version
+
+      - name: 运行 ShellCheck
+        run: bash tests/shellcheck.sh
+
+      - name: 检查脚本执行权限
+        run: |
+          echo "检查关键脚本是否可执行..."
+          for f in install.sh uninstall.sh setup.sh ubinit; do
+            if [[ -f "${f}" ]]; then
+              chmod +x "${f}"
+              echo "  ✓ ${f}"
+            fi
+          done

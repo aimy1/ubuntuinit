@@ -20,7 +20,7 @@ _resolve_project_root() {
 }
 
 PROJECT_ROOT="$(_resolve_project_root)"
-INSTALL_SCRIPT="${PROJECT_ROOT}/ubuntu-init/install.sh"
+INSTALL_SCRIPT="${PROJECT_ROOT}/install.sh"
 
 # 验证主脚本存在
 if [[ ! -f "${INSTALL_SCRIPT}" ]]; then

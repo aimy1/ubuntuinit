@@ -22,6 +22,7 @@ log_warn() { echo -e "  ${C_YEL}⚠${R} $*"; }
 # ── 路径定位 ───────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 UBINIT_SCRIPT="${SCRIPT_DIR}/ubinit"
+INSTALL_SCRIPT="${SCRIPT_DIR}/install.sh"
 GAMES_SCRIPT="${SCRIPT_DIR}/games/launcher.sh"
 INSTALL_DIR="/usr/local/bin"
 
@@ -105,8 +106,8 @@ if [[ ! -f "${UBINIT_SCRIPT}" ]]; then
     exit 1
 fi
 
-if [[ ! -f "${SCRIPT_DIR}/ubuntu-init/install.sh" ]]; then
-    log_err "找不到主程序: ${SCRIPT_DIR}/ubuntu-init/install.sh"
+if [[ ! -f "${INSTALL_SCRIPT}" ]]; then
+    log_err "找不到主程序: ${INSTALL_SCRIPT}"
     log_err "请确认项目文件完整"
     exit 1
 fi

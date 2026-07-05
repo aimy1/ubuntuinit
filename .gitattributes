@@ -1,0 +1,28 @@
+# UbuntuInit — .gitattributes
+# 强制所有 Shell 脚本使用 LF 换行（在 Linux 上运行必须是 LF）
+
+# 默认：文本文件自动处理
+* text=auto
+
+# Shell 脚本：强制 LF
+*.sh        text eol=lf
+ubinit      text eol=lf
+setup.sh    text eol=lf
+
+# 文档：保持原样
+*.md        text eol=lf
+*.txt       text eol=lf
+
+# 配置文件：LF
+*.conf      text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+.gitignore  text eol=lf
+.editorconfig text eol=lf
+.shellcheckrc text eol=lf
+
+# 二进制文件：不处理换行
+*.png       binary
+*.jpg       binary
+*.gif       binary
+*.ico       binary
