@@ -18,11 +18,27 @@ module_check() { return 1; }
 
 # 安装基础软件包
 _system_install_base_pkgs() {
-    log_info "安装基础工具包..."
-    apt_ensure_installed \
-        ca-certificates curl gnupg lsb-release \
-        software-properties-common apt-transport-https \
+    local -a pkgs=(
+        ca-certificates curl gnupg lsb-release
+        software-properties-common apt-transport-https
         bash-completion dbus systemd-timesyncd
+    )
+
+    log_info "检查基础工具包..."
+    local missing=()
+    for pkg in "${pkgs[@]}"; do
+        if ! dpkg -l "${pkg}" &>/dev/null; then
+            missing+=("${pkg}")
+        fi
+    done
+
+    if [[ ${#missing[@]} -eq 0 ]]; then
+        log_debug "所有基础包已安装"
+        return 0
+    fi
+
+    log_info "安装缺失的包: ${missing[*]}"
+    apt_ensure_installed "${missing[@]}"
 }
 
 # 配置时区
@@ -30,19 +46,39 @@ _system_set_timezone() {
     local tz="${UBINIT_SYSTEM_TIMEZONE:-}"
     [[ -z "${tz}" ]] && return 0
 
+    # 验证时区有效性
     if ! timedatectl list-timezones 2>/dev/null | grep -q "^${tz}$"; then
         log_warning "无效时区: ${tz}，跳过"
         return 0
     fi
 
-    timedatectl set-timezone "${tz}" && \
+    # 检查当前时区
+    local current_tz
+    current_tz="$(timedatectl show -p Timezone --value 2>/dev/null || echo '')"
+    if [[ "${current_tz}" == "${tz}" ]]; then
+        log_debug "时区已是: ${tz}"
+        return 0
+    fi
+
+    # 设置时区
+    if timedatectl set-timezone "${tz}"; then
         log_success "时区已设置: ${tz}"
+    else
+        log_error "设置时区失败: ${tz}"
+        return 1
+    fi
 }
 
 # 配置 NTP
 _system_set_ntp() {
     local ntp_servers="${UBINIT_SYSTEM_NTP_SERVERS:-}"
     [[ -z "${ntp_servers}" ]] && return 0
+
+    # 检查 systemd-timesyncd 是否可用
+    if ! systemctl list-unit-files systemd-timesyncd.service &>/dev/null; then
+        log_warning "systemd-timesyncd 不可用，跳过 NTP 配置"
+        return 0
+    fi
 
     # 写入 timesyncd.conf
     backup_file /etc/systemd/timesyncd.conf system
@@ -55,9 +91,22 @@ PollIntervalMinSec=32
 PollIntervalMaxSec=2048
 EOF
 
-    systemctl restart systemd-timesyncd 2>/dev/null || true
-    timedatectl set-ntp true
-    log_success "NTP 已配置: ${ntp_servers}"
+    # 重启并启用服务
+    if ! systemctl restart systemd-timesyncd 2>/dev/null; then
+        log_warning "重启 systemd-timesyncd 失败"
+    fi
+
+    if ! timedatectl set-ntp true 2>/dev/null; then
+        log_warning "启用 NTP 失败"
+    fi
+
+    # 验证服务状态
+    sleep 1
+    if systemctl is-active --quiet systemd-timesyncd; then
+        log_success "NTP 已配置: ${ntp_servers}"
+    else
+        log_warning "NTP 服务未正常运行，但配置已保存"
+    fi
 }
 
 # 配置 Locale
@@ -65,9 +114,28 @@ _system_set_locale() {
     local locale="${UBINIT_SYSTEM_LOCALE:-}"
     [[ -z "${locale}" ]] && return 0
 
+    # 检查当前 locale
+    local current_locale
+    current_locale="$(locale 2>/dev/null | grep '^LANG=' | cut -d= -f2 || echo '')"
+    if [[ "${current_locale}" == "${locale}" ]]; then
+        log_debug "Locale 已是: ${locale}"
+        return 0
+    fi
+
     apt_ensure_installed locales
-    locale-gen "${locale}" 2>/dev/null || true
-    update-locale LANG="${locale}" LC_ALL="${locale}" 2>/dev/null || true
+
+    # 生成 locale
+    if ! locale-gen "${locale}" 2>/dev/null; then
+        log_error "生成 locale 失败: ${locale}"
+        return 1
+    fi
+
+    # 更新系统 locale
+    if ! update-locale LANG="${locale}" LC_ALL="${locale}" 2>/dev/null; then
+        log_error "更新 locale 配置失败"
+        return 1
+    fi
+
     log_success "Locale 已设置: ${locale}"
 }
 
@@ -79,14 +147,30 @@ _system_set_hostname() {
     local old_hostname
     old_hostname="$(hostname -s)"
 
-    hostnamectl set-hostname "${hostname}" 2>/dev/null || \
-        echo "${hostname}" > /etc/hostname
+    # 检查是否已经是目标 hostname
+    if [[ "${old_hostname}" == "${hostname}" ]]; then
+        log_debug "Hostname 已是: ${hostname}"
+        return 0
+    fi
+
+    # 设置 hostname
+    if ! hostnamectl set-hostname "${hostname}" 2>/dev/null; then
+        # 降级方案
+        if ! echo "${hostname}" > /etc/hostname 2>/dev/null; then
+            log_error "设置 hostname 失败"
+            return 1
+        fi
+    fi
 
     # 更新 /etc/hosts
     if ! grep -q "${hostname}" /etc/hosts; then
-        sed -i "s/127\.0\.1\.1.*/127.0.1.1\t${hostname}/" /etc/hosts
-        grep -q "127.0.1.1" /etc/hosts || \
+        # 尝试替换现有条目
+        if grep -q "127.0.1.1" /etc/hosts; then
+            sed -i "s/127\.0\.1\.1.*/127.0.1.1\t${hostname}/" /etc/hosts
+        else
+            # 添加新条目
             echo "127.0.1.1	${hostname}" >> /etc/hosts
+        fi
     fi
 
     log_success "Hostname 已设置: ${old_hostname} → ${hostname}"

@@ -13,21 +13,79 @@ module_info() {
     echo "description: 更换 APT 软件源为国内镜像"
 }
 
+# 获取镜像源域名
+_mirror_get_domain() {
+    local mirror="$1"
+
+    case "${mirror}" in
+        aliyun)    echo "mirrors.aliyun.com" ;;
+        tencent)   echo "mirrors.tencent.com" ;;
+        huawei)    echo "mirrors.huaweicloud.com" ;;
+        ustc)      echo "mirrors.ustc.edu.cn" ;;
+        tsinghua)  echo "mirrors.tuna.tsinghua.edu.cn" ;;
+        *)         return 1 ;;
+    esac
+}
+
 # 检测 sources.list 是否已含目标镜像域名
 module_check() {
     local mirror="${UBINIT_MIRROR_APT:-aliyun}"
     local domain
 
-    case "${mirror}" in
-        aliyun)    domain="mirrors.aliyun.com" ;;
-        tencent)   domain="mirrors.tencent.com" ;;
-        huawei)    domain="mirrors.huaweicloud.com" ;;
-        ustc)      domain="mirrors.ustc.edu.cn" ;;
-        tsinghua)  domain="mirrors.tuna.tsinghua.edu.cn" ;;
-        *)         return 1 ;;
-    esac
+    domain="$(_mirror_get_domain "${mirror}")" || return 1
 
-    grep -q "${domain}" /etc/apt/sources.list 2>/dev/null
+    # 检查传统 sources.list
+    if grep -q "${domain}" /etc/apt/sources.list 2>/dev/null; then
+        return 0
+    fi
+
+    # 检查 Ubuntu 24.04+ 的新格式 sources.list.d/ubuntu.sources
+    if [[ -f /etc/apt/sources.list.d/ubuntu.sources ]]; then
+        if grep -q "${domain}" /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null; then
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+# 获取镜像源基础 URL
+_mirror_get_base_url() {
+    local mirror="$1"
+
+    case "${mirror}" in
+        aliyun)    echo "http://mirrors.aliyun.com/ubuntu" ;;
+        tencent)   echo "http://mirrors.tencent.com/ubuntu" ;;
+        huawei)    echo "http://mirrors.huaweicloud.com/ubuntu" ;;
+        ustc)      echo "http://mirrors.ustc.edu.cn/ubuntu" ;;
+        tsinghua)  echo "http://mirrors.tuna.tsinghua.edu.cn/ubuntu" ;;
+        official)  echo "http://archive.ubuntu.com/ubuntu" ;;
+        *)
+            log_error "未知镜像源: ${mirror}"
+            return 1
+            ;;
+    esac
+}
+
+# 测试镜像源可用性
+_mirror_test_connectivity() {
+    local mirror="$1"
+    local codename="$2"
+    local base_url
+
+    base_url="$(_mirror_get_base_url "${mirror}")" || return 1
+
+    log_info "测试镜像源连通性: ${mirror}"
+
+    # 测试 Release 文件是否存在
+    local test_url="${base_url}/dists/${codename}/Release"
+    if curl -fsSL --connect-timeout 5 --max-time 10 "${test_url}" &>/dev/null; then
+        log_success "镜像源测试通过: ${mirror}"
+        return 0
+    else
+        log_warning "镜像源测试失败: ${mirror} (${test_url})"
+        return 1
+    fi
 }
 
 # 构建镜像源内容
@@ -36,18 +94,7 @@ _mirror_build_sources() {
     local codename="$2"
     local base_url
 
-    case "${mirror}" in
-        aliyun)    base_url="http://mirrors.aliyun.com/ubuntu" ;;
-        tencent)   base_url="http://mirrors.tencent.com/ubuntu" ;;
-        huawei)    base_url="http://mirrors.huaweicloud.com/ubuntu" ;;
-        ustc)      base_url="http://mirrors.ustc.edu.cn/ubuntu" ;;
-        tsinghua)  base_url="http://mirrors.tuna.tsinghua.edu.cn/ubuntu" ;;
-        official)  base_url="http://archive.ubuntu.com/ubuntu" ;;
-        *)
-            log_error "未知镜像源: ${mirror}"
-            return 1
-            ;;
-    esac
+    base_url="$(_mirror_get_base_url "${mirror}")" || return 1
 
     cat <<EOF
 # UbuntuInit 自动生成 — 镜像源: ${mirror}
@@ -80,6 +127,12 @@ module_install() {
 
     local mirror="${UBINIT_MIRROR_APT:-aliyun}"
     log_info "目标镜像: ${mirror}  代号: ${codename}"
+
+    # 测试镜像源连通性
+    if ! _mirror_test_connectivity "${mirror}" "${codename}"; then
+        log_error "镜像源不可用，请检查网络连接或更换镜像源"
+        return 1
+    fi
 
     # 构建新的 sources.list 内容
     local new_sources
