@@ -83,22 +83,22 @@ _ui_term_rows() {
 }
 
 # 隐藏光标
-_ui_cursor_hide() { printf '\033[?25l'; }
+_ui_cursor_hide() { printf '\033[?25l' >&2; }
 
 # 显示光标
-_ui_cursor_show() { printf '\033[?25h'; }
+_ui_cursor_show() { printf '\033[?25h' >&2; }
 
 # 清屏
-_ui_clear() { printf '\033[2J\033[H'; }
+_ui_clear() { printf '\033[2J\033[H' >&2; }
 
 # 向上移动 N 行并回到行首
 _ui_cursor_up() {
     local n="${1:-1}"
-    printf "\033[%dA\r" "${n}"
+    printf "\033[%dA\r" "${n}" >&2
 }
 
 # 清除从光标到行尾
-_ui_erase_line() { printf '\033[K'; }
+_ui_erase_line() { printf '\033[K' >&2; }
 
 # =============================================================================
 # 3. 按键读取（核心：解析 ANSI 转义序列）
@@ -164,7 +164,7 @@ _ui_hline() {
     local l="$1" f="$2" r="$3" w="$4"
     local mid
     mid="$(printf "${f}%.0s" $(seq 1 $(( w - 2 ))))"
-    printf "${UI_C_BORDER}%s%s%s${UI_C_RESET}\n" "${l}" "${mid}" "${r}"
+    printf "${UI_C_BORDER}%s%s%s${UI_C_RESET}\n" "${l}" "${mid}" "${r}" >&2
 }
 
 # 绘制内容行（带边框）
@@ -173,15 +173,15 @@ _ui_row() {
     local content="$1"
     local visible_len="${2:-0}"
     local pad=$(( UI_INNER_W - visible_len ))
-    (( pad < 0 )) && pad=0
+    (( pad < 0 )) && pad=0 || true
     printf "${UI_C_BORDER}│${UI_C_RESET} %s%*s ${UI_C_BORDER}│${UI_C_RESET}\n" \
-        "${content}" "${pad}" ''
+        "${content}" "${pad}" '' >&2
 }
 
 # 绘制空内容行
 _ui_empty_row() {
     printf "${UI_C_BORDER}│${UI_C_RESET}%*s${UI_C_BORDER}│${UI_C_RESET}\n" \
-        "$(( UI_MENU_WIDTH - 2 ))" ''
+        "$(( UI_MENU_WIDTH - 2 ))" '' >&2
 }
 
 # 居中文本（纯 ASCII 宽度，不含颜色转义）
@@ -205,9 +205,9 @@ ui_banner() {
     local cols
     cols="$(_ui_term_cols)"
 
-    printf '\n'
-    printf "${UI_C_PRIMARY}${UI_C_BOLD}"
-    cat <<'LOGO'
+    printf '\n' >&2
+    printf "${UI_C_PRIMARY}${UI_C_BOLD}" >&2
+    cat <<'LOGO' >&2
   ██╗   ██╗██████╗ ██╗   ██╗███╗  ██╗████████╗██╗   ██╗
   ██║   ██║██╔══██╗██║   ██║████╗ ██║╚══██╔══╝██║   ██║
   ██║   ██║██████╔╝██║   ██║██╔██╗██║   ██║   ██║   ██║
@@ -215,18 +215,18 @@ ui_banner() {
   ╚██████╔╝╚█████╔╝╚██████╔╝██║ ╚███║   ██║   ╚██████╔╝
    ╚═════╝  ╚════╝  ╚═════╝ ╚═╝  ╚══╝   ╚═╝    ╚═════╝
 LOGO
-    printf "${UI_C_RESET}\n"
+    printf "${UI_C_RESET}\n" >&2
 
     printf "  ${UI_C_MUTED}%s${UI_C_RESET}\n" \
-        "Ubuntu Server 一键初始化框架  ·  v${ver}"
+        "Ubuntu Server 一键初始化框架  ·  v${ver}" >&2
     printf "  ${UI_C_MUTED}%s${UI_C_RESET}\n" \
-        "支持: Ubuntu 20.04 / 22.04 / 24.04 / 26.04  ·  amd64 / arm64"
-    printf '\n'
+        "支持: Ubuntu 20.04 / 22.04 / 24.04 / 26.04  ·  amd64 / arm64" >&2
+    printf '\n' >&2
 
     # 渐变分隔线
-    printf "  ${UI_C_PRIMARY}"
-    printf '─%.0s' $(seq 1 54)
-    printf "${UI_C_RESET}\n\n"
+    printf "  ${UI_C_PRIMARY}" >&2
+    printf '─%.0s' $(seq 1 54) >&2
+    printf "${UI_C_RESET}\n\n" >&2
 }
 
 # =============================================================================
@@ -239,7 +239,7 @@ _ui_info_row() {
     local value="$2"
     local label_len=16
     printf "  ${UI_C_MUTED}%-*s${UI_C_RESET}  ${UI_C_ACCENT}%s${UI_C_RESET}\n" \
-        "${label_len}" "${label}" "${value}"
+        "${label_len}" "${label}" "${value}" >&2
 }
 
 # 显示系统信息面板（在主菜单上方展示）
@@ -257,9 +257,9 @@ ui_system_info() {
     mem_free="$(free -h 2>/dev/null | awk '/^Mem:/{print $7}' || echo '?')"
     ip_addr="$(hostname -I 2>/dev/null | awk '{print $1}' || echo 'Unknown')"
 
-    printf "  ${UI_C_BORDER}╭──────────────────────────────────────────────────────╮${UI_C_RESET}\n"
-    printf "  ${UI_C_BORDER}│${UI_C_RESET} ${UI_C_PRIMARY}${UI_C_BOLD}  系统信息${UI_C_RESET}%47s${UI_C_BORDER}│${UI_C_RESET}\n" ''
-    printf "  ${UI_C_BORDER}├──────────────────────────────────────────────────────┤${UI_C_RESET}\n"
+    printf "  ${UI_C_BORDER}╭──────────────────────────────────────────────────────╮${UI_C_RESET}\n" >&2
+    printf "  ${UI_C_BORDER}│${UI_C_RESET} ${UI_C_PRIMARY}${UI_C_BOLD}  系统信息${UI_C_RESET}%47s${UI_C_BORDER}│${UI_C_RESET}\n" '' >&2
+    printf "  ${UI_C_BORDER}├──────────────────────────────────────────────────────┤${UI_C_RESET}\n" >&2
     _ui_info_row "  操作系统" "${os_name} ${os_version}"
     _ui_info_row "  内核"     "${kernel}"
     _ui_info_row "  架构"     "${arch}"
@@ -267,7 +267,7 @@ ui_system_info() {
     _ui_info_row "  CPU"      "${cpu_model:0:38}"
     _ui_info_row "  内存"     "${mem_free} 可用 / ${mem_total} 总计"
     _ui_info_row "  IP 地址"  "${ip_addr}"
-    printf "  ${UI_C_BORDER}╰──────────────────────────────────────────────────────╯${UI_C_RESET}\n\n"
+    printf "  ${UI_C_BORDER}╰──────────────────────────────────────────────────────╯${UI_C_RESET}\n\n" >&2
 }
 
 # =============================================================================
@@ -289,12 +289,12 @@ _ui_render_menu_items() {
         if (( i == sel )); then
             # 高亮行
             printf "${UI_C_BORDER}│${UI_C_RESET}${UI_C_SEL_BG} ${UI_C_SEL_FG}${UI_C_BOLD}${UI_ICON_CURSOR} %-*s${UI_C_RESET}${UI_C_SEL_BG}  ${UI_C_RESET}${UI_C_BORDER}│${UI_C_RESET}\n" \
-                "$(( UI_MENU_WIDTH - 7 ))" "${label}"
+                "$(( UI_MENU_WIDTH - 7 ))" "${label}" >&2
         else
             printf "${UI_C_BORDER}│${UI_C_RESET}   ${UI_C_MUTED}  %-*s${UI_C_RESET}  ${UI_C_BORDER}│${UI_C_RESET}\n" \
-                "$(( UI_MENU_WIDTH - 8 ))" "${label}"
+                "$(( UI_MENU_WIDTH - 8 ))" "${label}" >&2
         fi
-        (( i++ ))
+        (( i++ )) || true
     done
 }
 
@@ -312,7 +312,7 @@ _ui_draw_menu() {
     local centered_title
     centered_title="$(_ui_center "${title}" "$(( UI_MENU_WIDTH - 4 ))")"
     printf "${UI_C_BORDER}│${UI_C_RESET} ${UI_C_TITLE}${UI_C_BOLD}%s${UI_C_RESET} ${UI_C_BORDER}│${UI_C_RESET}\n" \
-        "${centered_title}"
+        "${centered_title}" >&2
 
     _ui_hline "${UI_BOX_ML}" "${UI_BOX_H}" "${UI_BOX_MR}" "${UI_MENU_WIDTH}"
     _ui_empty_row
@@ -323,7 +323,7 @@ _ui_draw_menu() {
     # 操作提示行
     local hint="  ↑/k 上移  ↓/j 下移  Enter 确认  q 退出"
     printf "${UI_C_BORDER}│${UI_C_RESET}${UI_C_MUTED}%-*s${UI_C_RESET}${UI_C_BORDER}│${UI_C_RESET}\n" \
-        "$(( UI_MENU_WIDTH - 2 ))" "${hint}"
+        "$(( UI_MENU_WIDTH - 2 ))" "${hint}" >&2
 
     _ui_hline "${UI_BOX_BL}" "${UI_BOX_H}" "${UI_BOX_BR}" "${UI_MENU_WIDTH}"
 }
@@ -408,12 +408,12 @@ _ui_render_checklist_items() {
 
         if (( i == cur )); then
             printf "${UI_C_BORDER}│${UI_C_RESET}${UI_C_SEL_BG} ${UI_C_SEL_FG}${UI_C_BOLD}${UI_ICON_CURSOR}${UI_C_RESET}${UI_C_SEL_BG} %s ${UI_C_SEL_FG}%-*s${UI_C_RESET}${UI_C_SEL_BG} ${UI_C_RESET}${UI_C_BORDER}│${UI_C_RESET}\n" \
-                "${check_icon}" "$(( UI_MENU_WIDTH - 10 ))" "${label}"
+                "${check_icon}" "$(( UI_MENU_WIDTH - 10 ))" "${label}" >&2
         else
             printf "${UI_C_BORDER}│${UI_C_RESET}    %s ${UI_C_MUTED}%-*s${UI_C_RESET}  ${UI_C_BORDER}│${UI_C_RESET}\n" \
-                "${check_icon}" "$(( UI_MENU_WIDTH - 10 ))" "${label}"
+                "${check_icon}" "$(( UI_MENU_WIDTH - 10 ))" "${label}" >&2
         fi
-        (( i++ ))
+        (( i++ )) || true
     done
 }
 
@@ -431,7 +431,7 @@ _ui_draw_checklist() {
     local centered_title
     centered_title="$(_ui_center "${title}" "$(( UI_MENU_WIDTH - 4 ))")"
     printf "${UI_C_BORDER}│${UI_C_RESET} ${UI_C_TITLE}${UI_C_BOLD}%s${UI_C_RESET} ${UI_C_BORDER}│${UI_C_RESET}\n" \
-        "${centered_title}"
+        "${centered_title}" >&2
 
     _ui_hline "${UI_BOX_ML}" "${UI_BOX_H}" "${UI_BOX_MR}" "${UI_MENU_WIDTH}"
     _ui_empty_row
@@ -441,7 +441,7 @@ _ui_draw_checklist() {
 
     local hint="  ↑↓ 移动  Space 选择  A 全选  N 清空  Enter 确认"
     printf "${UI_C_BORDER}│${UI_C_RESET}${UI_C_MUTED}%-*s${UI_C_RESET}${UI_C_BORDER}│${UI_C_RESET}\n" \
-        "$(( UI_MENU_WIDTH - 2 ))" "${hint}"
+        "$(( UI_MENU_WIDTH - 2 ))" "${hint}" >&2
 
     _ui_hline "${UI_BOX_BL}" "${UI_BOX_H}" "${UI_BOX_BR}" "${UI_MENU_WIDTH}"
 }
@@ -545,7 +545,7 @@ _ui_draw_confirm() {
 
     # 消息行（可多行）
     printf "${UI_C_BORDER}│${UI_C_RESET}  ${UI_C_WHITE}%-*s${UI_C_RESET}  ${UI_C_BORDER}│${UI_C_RESET}\n" \
-        "$(( UI_MENU_WIDTH - 6 ))" "${message}"
+        "$(( UI_MENU_WIDTH - 6 ))" "${message}" >&2
 
     _ui_empty_row
     _ui_hline "${UI_BOX_ML}" "${UI_BOX_H}" "${UI_BOX_MR}" "${UI_MENU_WIDTH}"
@@ -562,14 +562,14 @@ _ui_draw_confirm() {
     fi
 
     printf "${UI_C_BORDER}│${UI_C_RESET}          %s      %s%*s${UI_C_BORDER}│${UI_C_RESET}\n" \
-        "${yes_btn}" "${no_btn}" 12 ''
+        "${yes_btn}" "${no_btn}" 12 '' >&2
 
     _ui_empty_row
     _ui_hline "${UI_BOX_ML}" "${UI_BOX_H}" "${UI_BOX_MR}" "${UI_MENU_WIDTH}"
 
     local hint="  ←/→ 切换  Enter 确认"
     printf "${UI_C_BORDER}│${UI_C_RESET}${UI_C_MUTED}%-*s${UI_C_RESET}${UI_C_BORDER}│${UI_C_RESET}\n" \
-        "$(( UI_MENU_WIDTH - 2 ))" "${hint}"
+        "$(( UI_MENU_WIDTH - 2 ))" "${hint}" >&2
     _ui_hline "${UI_BOX_BL}" "${UI_BOX_H}" "${UI_BOX_BR}" "${UI_MENU_WIDTH}"
 }
 
@@ -626,13 +626,13 @@ ui_input() {
     local input="${default}"
 
     _ui_cursor_show
-    printf '\n'
+    printf '\n' >&2
     _ui_hline "${UI_BOX_TL}" "${UI_BOX_H}" "${UI_BOX_TR}" "${UI_MENU_WIDTH}"
     printf "${UI_C_BORDER}│${UI_C_RESET}  ${UI_C_WHITE}${UI_C_BOLD}%-*s${UI_C_RESET}  ${UI_C_BORDER}│${UI_C_RESET}\n" \
-        "$(( UI_MENU_WIDTH - 6 ))" "${prompt}"
+        "$(( UI_MENU_WIDTH - 6 ))" "${prompt}" >&2
     _ui_hline "${UI_BOX_ML}" "${UI_BOX_H}" "${UI_BOX_MR}" "${UI_MENU_WIDTH}"
 
-    printf "${UI_C_BORDER}│${UI_C_RESET}  ${UI_C_PRIMARY}❯ ${UI_C_RESET}"
+    printf "${UI_C_BORDER}│${UI_C_RESET}  ${UI_C_PRIMARY}❯ ${UI_C_RESET}" >&2
     # 读取一行（支持退格）
     IFS= read -re -i "${default}" -p "" input 2>/dev/null || {
         IFS= read -re input
@@ -672,9 +672,9 @@ ui_spinner_start() {
         while true; do
             local frame="${frames[$i]}"
             local color="${colors[$ci]}"
-            printf "\r  ${color}${UI_C_BOLD}%s${UI_C_RESET}  %s  " "${frame}" "${label}"
-            (( i = (i + 1) % ${#frames[@]} ))
-            (( ci = (ci + 1) % ${#colors[@]} ))
+            printf "\r  ${color}${UI_C_BOLD}%s${UI_C_RESET}  %s  " "${frame}" "${label}" >&2
+            (( i = (i + 1) % ${#frames[@]} )) || true
+            (( ci = (ci + 1) % ${#colors[@]} )) || true
             sleep 0.08
         done
     ) &
@@ -705,7 +705,7 @@ ui_spinner_stop() {
         *)    icon="·";                     color="${UI_C_MUTED}" ;;
     esac
 
-    printf "\r  ${color}${UI_C_BOLD}%s${UI_C_RESET}  %s\n" "${icon}" "${final_msg}"
+    printf "\r  ${color}${UI_C_BOLD}%s${UI_C_RESET}  %s\n" "${icon}" "${final_msg}" >&2
     _ui_cursor_show
 }
 
@@ -729,9 +729,9 @@ ui_progress() {
     local bar="${UI_C_PRIMARY}$(printf '█%.0s' $(seq 1 "${filled}"))${UI_C_MUTED}$(printf '░%.0s' $(seq 1 "${empty}"))${UI_C_RESET}"
 
     printf "\r  [%s] ${UI_C_BOLD}%3d%%${UI_C_RESET}  ${UI_C_MUTED}%s${UI_C_RESET}  %s" \
-        "${bar}" "${pct}" "${module}" "${msg}"
+        "${bar}" "${pct}" "${module}" "${msg}" >&2
 
-    (( current >= total )) && printf '\n'
+    (( current >= total )) && printf '\n' >&2
 }
 
 # =============================================================================
