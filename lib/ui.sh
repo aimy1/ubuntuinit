@@ -264,6 +264,15 @@ ui_banner() {
     printf "  " >&2
     _ui_gradient_line 54
     printf '\n' >&2
+
+    # 标语
+    printf "  ${UI_C_MUTED}世界在滚动更新，Ubuntu 在长期支持${UI_C_RESET}\n" >&2
+    printf "  ${UI_C_DIM}LTS = Long Time Stagnation${UI_C_RESET}\n" >&2
+    printf '\n' >&2
+
+    # 作者信息
+    printf "  ${UI_C_MUTED}Made with${UI_C_RESET} ${UI_C_ERR}♥${UI_C_RESET} ${UI_C_MUTED}by${UI_C_RESET} ${UI_C_PRIMARY}aisaniya${UI_C_RESET}\n" >&2
+    printf '\n' >&2
 }
 
 # =============================================================================
