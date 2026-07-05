@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# =============================================================================
+# ubinit — UbuntuInit 全局命令入口
+# =============================================================================
+# 安装后可在任意位置执行: sudo ubinit
+# 安装方式: sudo bash setup.sh
+# =============================================================================
+
+# 找到实际脚本位置（支持软链接）
+_resolve_project_root() {
+    local src="${BASH_SOURCE[0]}"
+    # 追踪软链接
+    while [[ -L "${src}" ]]; do
+        local dir
+        dir="$(cd "$(dirname "${src}")" && pwd)"
+        src="$(readlink "${src}")"
+        [[ "${src}" != /* ]] && src="${dir}/${src}"
+    done
+    cd "$(dirname "${src}")" && pwd
+}
+
+PROJECT_ROOT="$(_resolve_project_root)"
+INSTALL_SCRIPT="${PROJECT_ROOT}/ubuntu-init/install.sh"
+
+# 验证主脚本存在
+if [[ ! -f "${INSTALL_SCRIPT}" ]]; then
+    echo "错误: 找不到主脚本: ${INSTALL_SCRIPT}" >&2
+    echo "请确认 UbuntuInit 项目完整安装到: ${PROJECT_ROOT}" >&2
+    exit 1
+fi
+
+# 透传所有参数给主脚本
+exec bash "${INSTALL_SCRIPT}" "$@"

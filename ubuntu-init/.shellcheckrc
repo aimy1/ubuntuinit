@@ -1,0 +1,9 @@
+# ShellCheck 全局配置
+# https://www.shellcheck.net/wiki/
+
+# 所有脚本的默认 shell 类型
+shell=bash
+
+# 全局禁用的规则（需要有明确理由）
+# SC1091: 不跟踪 source 的文件（source 动态路径时合理）
+disable=SC1091

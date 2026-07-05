@@ -1,0 +1,95 @@
+# =============================================================================
+# UbuntuInit — 自定义配置示例
+# =============================================================================
+# 文件        : config/custom.conf.example
+# 说明        : 将此文件复制为 custom.conf 并按需修改
+#             : custom.conf 中的变量会覆盖 default.conf 中的默认值
+#             : 只需填写需要修改的变量，其余保持 default.conf 默认值
+#
+# 使用方法:
+#   cp config/custom.conf.example config/custom.conf
+#   vim config/custom.conf
+# =============================================================================
+
+# =============================================================================
+# 快速配置示例（取消注释并修改需要的部分）
+# =============================================================================
+
+# --- 全局行为 ---
+# UBINIT_STOP_ON_ERROR="false"
+
+# --- 系统基础 ---
+# UBINIT_SYSTEM_TIMEZONE="Asia/Shanghai"
+# UBINIT_SYSTEM_HOSTNAME="my-server"
+
+# --- 软件源（中国大陆服务器推荐开启）---
+# UBINIT_MIRROR_ENABLE="true"
+# UBINIT_MIRROR_APT="aliyun"
+
+# --- SSH 安全 ---
+# UBINIT_SSH_PORT="2222"
+# UBINIT_SSH_PASSWORD_AUTH="no"
+# UBINIT_SSH_PERMIT_ROOT_LOGIN="prohibit-password"
+
+# --- 创建管理员用户 ---
+# UBINIT_USER_CREATE="true"
+# UBINIT_USER_NAME="deploy"
+# UBINIT_USER_AUTHORIZED_KEYS="ssh-rsa AAAAB3NzaC1yc2EAAA... user@machine"
+
+# --- UFW 防火墙 ---
+# UBINIT_SECURITY_UFW="true"
+# UBINIT_SECURITY_UFW_ALLOW_PORTS="2222 80 443"
+
+# --- Docker ---
+# UBINIT_DOCKER_ENABLE="true"
+# UBINIT_DOCKER_ADD_USER="true"
+
+# --- Node.js ---
+# UBINIT_NODE_ENABLE="true"
+# UBINIT_NODE_VERSION="lts"
+
+# --- Python ---
+# UBINIT_PYTHON_ENABLE="true"
+# UBINIT_PYTHON_METHOD="apt"
+
+# --- Redis ---
+# UBINIT_REDIS_ENABLE="true"
+# UBINIT_REDIS_PASSWORD="your_redis_password_here"
+
+# --- PostgreSQL ---
+# UBINIT_POSTGRESQL_ENABLE="true"
+# UBINIT_POSTGRESQL_PASSWORD="your_pg_password_here"
+
+# --- Nginx ---
+# UBINIT_NGINX_ENABLE="true"
+
+# --- BBR + 网络优化 ---
+# UBINIT_OPTIMIZE_BBR="true"
+# UBINIT_OPTIMIZE_SWAP="true"
+# UBINIT_OPTIMIZE_SWAP_SIZE="4G"
+
+# =============================================================================
+# 典型场景预设
+# =============================================================================
+
+# [场景 1] Web 服务器
+# UBINIT_NGINX_ENABLE="true"
+# UBINIT_SECURITY_UFW="true"
+# UBINIT_SECURITY_UFW_ALLOW_PORTS="22 80 443"
+# UBINIT_OPTIMIZE_BBR="true"
+# UBINIT_DOCKER_ENABLE="true"
+
+# [场景 2] 开发服务器
+# UBINIT_NODE_ENABLE="true"
+# UBINIT_PYTHON_ENABLE="true"
+# UBINIT_DOCKER_ENABLE="true"
+# UBINIT_REDIS_ENABLE="true"
+# UBINIT_POSTGRESQL_ENABLE="true"
+
+# [场景 3] 数据库服务器
+# UBINIT_MARIADB_ENABLE="true"
+# UBINIT_REDIS_ENABLE="true"
+# UBINIT_OPTIMIZE_SWAP="true"
+# UBINIT_OPTIMIZE_SWAP_SIZE="8G"
+# UBINIT_SECURITY_UFW="true"
+# UBINIT_SECURITY_UFW_ALLOW_PORTS="22 3306 6379"
