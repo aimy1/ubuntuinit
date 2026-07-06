@@ -381,8 +381,8 @@ ui_menu() {
     local sel=0
 
     # 计算菜单总行数（用于重绘时向上移动光标）
-    # top_border + title + mid_border + empty + items + empty + mid_border + hint + bottom_border
-    local total_lines=$(( total + 8 ))
+    # top_border + title + mid_border + empty + items + empty + mid_border + hint + bottom_border = total + 9
+    local total_lines=$(( total + 9 ))
 
     _ui_cursor_hide
 
@@ -625,7 +625,7 @@ ui_checklist() {
 
         if [[ "${full_redraw}" == "true" ]]; then
             # 全选/全不选：用光标向上跳后全量重绘
-            local jump=$(( total + 7 ))
+            local jump=$(( total + 9 ))
             printf "\033[%dA" "${jump}" >&2
             _ui_draw_checklist "${title}" "${cur}" checked items
         elif (( cur != prev_cur )) || [[ "${need_rows}" == "true" ]]; then
@@ -688,7 +688,7 @@ ui_confirm() {
     local sel=0
     [[ "${default}" == "no" ]] && sel=1
 
-    local total_lines=10
+    local total_lines=11
 
     _ui_cursor_hide
     # shellcheck disable=SC2064
