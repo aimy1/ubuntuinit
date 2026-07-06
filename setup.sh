@@ -20,7 +20,7 @@ log_info() { echo -e "  ${C_CYN}→${R} $*"; }
 log_warn() { echo -e "  ${C_YEL}⚠${R} $*"; }
 
 # ── 路径定位 ───────────────────────────────────────────────────────────────
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-.}")" && pwd)"
 UBINIT_SCRIPT="${SCRIPT_DIR}/ubinit"
 INSTALL_SCRIPT="${SCRIPT_DIR}/install.sh"
 GAMES_SCRIPT="${SCRIPT_DIR}/games/launcher.sh"
