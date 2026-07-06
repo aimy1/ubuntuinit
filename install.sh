@@ -380,6 +380,7 @@ _run_module() {
 # 按注册顺序执行所有模块
 run_all_modules() {
     log_info "开始执行模块队列（共 ${#MODULE_REGISTRY[@]} 个模块）..."
+    log_info "已选定模块: ${UBINIT_SELECTED_MODULES:-(全部执行)}"
     log_debug "执行模式: NON_INTERACTIVE=${UBINIT_NON_INTERACTIVE}, DRY_RUN=${UBINIT_DRY_RUN}"
 
     local entry alias filename

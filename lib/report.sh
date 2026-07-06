@@ -64,7 +64,7 @@ _report_collect() {
     _R_OS="$(. /etc/os-release 2>/dev/null && echo "${PRETTY_NAME:-Unknown}" || echo 'Unknown')"
     _R_KERNEL="$(uname -r)"
     _R_ARCH="$(uname -m)"
-    _R_HOSTNAME="$(hostname -s 2>/dev/null)"
+    _R_HOSTNAME="$(hostname -s 2>/dev/null || echo 'Unknown')"
     _R_UPTIME="$(uptime -p 2>/dev/null | sed 's/^up //' || echo '-')"
 
     # 硬件
