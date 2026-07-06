@@ -326,8 +326,8 @@ _ui_render_menu_items() {
                 printf "${UI_C_BORDER}│${UI_C_RESET}${UI_C_SEL_BG} ${UI_C_SEL_FG}${UI_C_BOLD}${UI_ICON_CURSOR} %s%*s${UI_C_RESET}${UI_C_SEL_BG}  ${UI_C_RESET}${UI_C_BORDER}│${UI_C_RESET}\n" \
                     "${label}" "${pad}" ''
             else
-                # 普通行：左侧 5 空格缩进，右侧 2 空格
-                local pad=$(( UI_MENU_WIDTH - 8 - label_len ))
+                # 普通行：左侧 5 空格缩进（3+2），右侧 2 空格，总计 9 列固定占位
+                local pad=$(( UI_MENU_WIDTH - 9 - label_len ))
                 (( pad < 0 )) && pad=0
                 printf "${UI_C_BORDER}│${UI_C_RESET}   ${UI_C_MUTED}  %s%*s${UI_C_RESET}  ${UI_C_BORDER}│${UI_C_RESET}\n" \
                     "${label}" "${pad}" ''
@@ -381,8 +381,8 @@ ui_menu() {
     local sel=0
 
     # 计算菜单总行数（用于重绘时向上移动光标）
-    # top_border + title + mid_border + empty + items + empty + mid_border + hint + bottom_border = total + 9
-    local total_lines=$(( total + 9 ))
+    # top_border(1) + title(1) + mid_border(1) + empty(1) + items(total) + empty(1) + mid_border(1) + hint(1) + bottom_border(1) = total + 8
+    local total_lines=$(( total + 8 ))
 
     _ui_cursor_hide
 
@@ -463,7 +463,7 @@ _ui_draw_checklist_row() {
     (( pad < 0 )) && pad=0
 
     if (( is_current )); then
-        printf "${UI_C_BORDER}│${UI_C_RESET}${UI_C_SEL_BG} ${UI_C_SEL_FG}${UI_C_BOLD}${UI_ICON_CURSOR}${UI_C_RESET}${UI_C_SEL_BG} %b ${UI_C_SEL_FG}%s%*s ${UI_C_RESET}${UI_C_SEL_BG}%b${UI_C_RESET}${UI_C_SEL_BG} ${UI_C_RESET}${UI_C_BORDER}│${UI_C_RESET}\n" \
+        printf "${UI_C_BORDER}│${UI_C_RESET}${UI_C_SEL_BG} ${UI_C_SEL_FG}${UI_C_BOLD}${UI_ICON_CURSOR}${UI_C_RESET}${UI_C_SEL_BG} %b ${UI_C_SEL_FG}%s%*s ${UI_C_RESET}${UI_C_SEL_BG}%b${UI_C_RESET}${UI_C_SEL_BG}  ${UI_C_RESET}${UI_C_BORDER}│${UI_C_RESET}\n" \
             "${check_icon}" "${label}" "${pad}" '' "${status_icon}" >&2
     else
         printf "${UI_C_BORDER}│${UI_C_RESET}    %b ${UI_C_MUTED}%s%*s ${UI_C_RESET}%b  ${UI_C_BORDER}│${UI_C_RESET}\n" \
