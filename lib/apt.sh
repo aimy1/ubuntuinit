@@ -110,17 +110,31 @@ apt_upgrade() {
         return 0
     fi
 
-    local cmd="upgrade"
+    local -a cmd=("upgrade")
     if [[ "${security_only}" == "true" ]]; then
-        cmd="--only-upgrade install $(apt-get --just-print upgrade 2>/dev/null | grep '^Inst' | grep -i security | awk '{print $2}' | tr '\n' ' ')"
+        # 构建安全更新包列表为数组，避免字符串拼接的单词拆分问题
+        local -a sec_pkgs=()
+        while IFS= read -r pkg; do
+            [[ -n "${pkg}" ]] && sec_pkgs+=("${pkg}")
+        done < <(apt-get --just-print upgrade 2>/dev/null | grep '^Inst' | grep -i security | awk '{print $2}')
+
+        if [[ ${#sec_pkgs[@]} -eq 0 ]]; then
+            log_info "没有待安装的安全更新"
+            return 0
+        fi
+        cmd=("--only-upgrade" "install" "${sec_pkgs[@]}")
     fi
 
-    if env "${_APT_ENV[@]}" apt-get "${_APT_OPTS[@]}" ${cmd} 2>&1 | \
-        while IFS= read -r line; do log_debug "APT: ${line}"; done; then
+    # 使用 pipefail 子 shell 捕获 apt-get 的真实退出码
+    local apt_rc=0
+    { env "${_APT_ENV[@]}" apt-get "${_APT_OPTS[@]}" "${cmd[@]}" 2>&1; apt_rc=${PIPESTATUS[0]}; } | \
+        while IFS= read -r line; do log_debug "APT: ${line}"; done
+
+    if [[ "${apt_rc}" -eq 0 ]]; then
         log_success "APT 升级完成"
         return 0
     else
-        log_error "APT 升级失败"
+        log_error "APT 升级失败（退出码: ${apt_rc}）"
         return 1
     fi
 }
@@ -142,20 +156,22 @@ apt_install() {
         return 0
     fi
 
-    if env "${_APT_ENV[@]}" apt-get install "${_APT_OPTS[@]}" "$@" 2>&1 | \
+    local apt_rc=0
+    { env "${_APT_ENV[@]}" apt-get install "${_APT_OPTS[@]}" "$@" 2>&1; apt_rc=${PIPESTATUS[0]}; } | \
         while IFS= read -r line; do
-            # 过滤冗余输出，只记录关键信息
             case "${line}" in
                 Setting\ up*|Unpacking*|Selecting*)
                     log_debug "APT: ${line}" ;;
                 E:*|Err:*)
                     log_error "APT: ${line}" ;;
             esac
-        done; then
+        done
+
+    if [[ "${apt_rc}" -eq 0 ]]; then
         log_success "安装成功: $*"
         return 0
     else
-        log_error "安装失败: $*"
+        log_error "安装失败: $*（退出码: ${apt_rc}）"
         return 1
     fi
 }
@@ -172,10 +188,11 @@ apt_remove() {
         log_debug "[DRY-RUN] apt-get remove $*"; return 0
     }
 
-    env "${_APT_ENV[@]}" apt-get remove "${_APT_OPTS[@]}" "$@" 2>&1 | \
+    local apt_rc=0
+    { env "${_APT_ENV[@]}" apt-get remove "${_APT_OPTS[@]}" "$@" 2>&1; apt_rc=${PIPESTATUS[0]}; } | \
         while IFS= read -r line; do log_debug "APT: ${line}"; done
 
-    log_success "移除成功: $*"
+    [[ "${apt_rc}" -eq 0 ]] && log_success "移除成功: $*" || { log_error "移除失败: $*"; return 1; }
 }
 
 # 彻底卸载软件包（含配置文件）
@@ -190,10 +207,11 @@ apt_purge() {
         log_debug "[DRY-RUN] apt-get purge $*"; return 0
     }
 
-    env "${_APT_ENV[@]}" apt-get purge "${_APT_OPTS[@]}" "$@" 2>&1 | \
+    local apt_rc=0
+    { env "${_APT_ENV[@]}" apt-get purge "${_APT_OPTS[@]}" "$@" 2>&1; apt_rc=${PIPESTATUS[0]}; } | \
         while IFS= read -r line; do log_debug "APT: ${line}"; done
 
-    log_success "清除完成: $*"
+    [[ "${apt_rc}" -eq 0 ]] && log_success "清除完成: $*" || { log_error "清除失败: $*"; return 1; }
 }
 
 # 清理不需要的依赖
@@ -281,13 +299,25 @@ apt_add_key() {
 
     if [[ "${source}" == http* ]]; then
         log_debug "下载 GPG 密钥: ${source} → ${dest}"
-        curl -fsSL "${source}" | gpg --dearmor -o "${dest}" || {
+        # 先下载到临时文件，避免 curl 失败时 gpg 生成空文件
+        local tmp_key
+        tmp_key="$(mktemp /tmp/ubinit-gpg-XXXXXX)"
+        if ! curl -fsSL --connect-timeout 10 --max-time 30 \
+                "${source}" -o "${tmp_key}" 2>/dev/null; then
             log_error "下载 GPG 密钥失败: ${source}"
+            rm -f "${tmp_key}"
+            return 1
+        fi
+        gpg --dearmor -o "${dest}" < "${tmp_key}" || {
+            log_error "解析 GPG 密钥失败: ${source}"
+            rm -f "${tmp_key}" "${dest}"
             return 1
         }
+        rm -f "${tmp_key}"
     else
         gpg --dearmor -o "${dest}" < "${source}" || {
             log_error "导入 GPG 密钥失败: ${source}"
+            rm -f "${dest}"
             return 1
         }
     fi

@@ -123,7 +123,7 @@ _detect_virt() {
         DETECT_VIRT_TYPE="unknown-hypervisor"
     elif [[ -f /sys/class/dmi/id/product_name ]]; then
         local product
-        product="$(cat /sys/class/dmi/id/product_name 2>/dev/null | tr '[:upper:]' '[:lower:]')"
+        product="$(tr '[:upper:]' '[:lower:]' < /sys/class/dmi/id/product_name 2>/dev/null || true)"
         case "${product}" in
             *kvm*)    DETECT_IS_VM=true; DETECT_VIRT_TYPE="kvm"    ;;
             *vmware*) DETECT_IS_VM=true; DETECT_VIRT_TYPE="vmware" ;;
@@ -223,15 +223,15 @@ _detect_hardware() {
 _detect_network() {
     # 互联网连通性（超时 3s）
     if curl -sf --connect-timeout 3 --max-time 5 https://1.1.1.1 &>/dev/null || \
-       ping -c1 -W3 1.1.1.1 &>/dev/null 2>&1; then
+       ping -c1 -W3 1.1.1.1 &>/dev/null; then
         DETECT_HAS_INTERNET=true
     else
         DETECT_HAS_INTERNET=false
     fi
 
     # DNS 解析（解析 cloudflare.com）
-    if getent hosts cloudflare.com &>/dev/null 2>&1 || \
-       host -W 3 cloudflare.com &>/dev/null 2>&1; then
+    if getent hosts cloudflare.com &>/dev/null || \
+       host -W 3 cloudflare.com &>/dev/null; then
         DETECT_HAS_DNS=true
     else
         DETECT_HAS_DNS=false

@@ -80,7 +80,8 @@ util_csv_to_array() {
 util_repeat_char() {
     local char="$1"
     local n="$2"
-    printf "${char}%.0s" $(seq 1 "${n}")
+    # 使用 %s 避免 char 含 % 时的格式化注入
+    printf '%s%.0s' "${char}" $(seq 1 "${n}")
 }
 
 # =============================================================================
@@ -352,8 +353,10 @@ util_run() {
 # 参数: $1=长度（默认 16）
 util_random_password() {
     local len="${1:-16}"
+    # 使用 printf 避免 head -c 截断后末尾可能无换行的问题
+    # tr 生成字符流，head -c 精确截取，不额外输出换行
     tr -dc 'A-Za-z0-9@#%^&*' < /dev/urandom 2>/dev/null | head -c "${len}"
-    echo
+    printf '\n'
 }
 
 # 获取本机主 IP 地址

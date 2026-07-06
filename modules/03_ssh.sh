@@ -121,16 +121,27 @@ module_install() {
         log_warning "SSH 服务状态异常"
     fi
 
-    # 若端口变更，更新 UFW 规则
+    # 若端口变更，更新 UFW 规则（先允许新端口，再删旧端口，避免封锁）
     if [[ "${port}" != "22" ]] && util_cmd_exists ufw; then
-        log_info "更新防火墙规则..."
-        ufw allow "${port}/tcp" comment "UbuntuInit SSH" 2>/dev/null || true
-        ufw delete allow 22/tcp 2>/dev/null || true
+        log_info "更新防火墙规则（旧端口 22 → 新端口 ${port}）..."
+        # Step 1: 先允许新端口连接
+        if ufw allow "${port}/tcp" comment "UbuntuInit SSH" 2>/dev/null; then
+            log_debug "UFW 已允许端口 ${port}/tcp"
+            # Step 2: 确认新端口已就绪后再删除旧端口
+            if net_wait_port "${port}" 5; then
+                ufw delete allow 22/tcp 2>/dev/null || \
+                    log_warning "UFW 删除旧端口 22 失败（可能未启用）"
+            else
+                log_warning "UFW: 新端口 ${port} 尚未就绪，保留旧端口 22 规则以备用"
+            fi
+        else
+            log_warning "UFW 添加新端口 ${port} 失败，保留旧规则"
+        fi
     fi
 
     log_success "SSH 配置完成"
     [[ "${port}" != "22" ]] && \
-        log_warning "⚠  SSH 端口已变更为 ${port}，请更新防火墙规则并测试连接后再断开当前会话！"
+        log_warning "⚠  SSH 端口已变更为 ${port}，请确认新端口连接正常后再断开当前会话！"
 
     return 0
 }

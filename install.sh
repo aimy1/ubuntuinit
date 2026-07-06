@@ -387,12 +387,18 @@ run_all_modules() {
         alias="${entry%%:*}"
         filename="${entry##*:}"
 
-        # preflight 失败则立即终止
-        if [[ "${alias}" == "preflight" && "${UBINIT_SKIP_PREFLIGHT}" != "true" ]]; then
-            _run_module "${alias}" "${filename}" || {
-                log_error "系统预检失败，终止安装。请修复上述问题后重试。"
-                exit 1
-            }
+        if [[ "${alias}" == "preflight" ]]; then
+            # preflight 模块特殊处理
+            if [[ "${UBINIT_SKIP_PREFLIGHT}" == "true" ]]; then
+                log_warning "跳过系统预检（--skip-preflight），请确保环境符合要求"
+                UBINIT_SKIPPED_MODULES+=("preflight")
+            else
+                # 预检失败就立即中止
+                _run_module "${alias}" "${filename}" || {
+                    log_error "系统预检失败，终止安装。请修复上述问题后重试。"
+                    exit 1
+                }
+            fi
         else
             _run_module "${alias}" "${filename}"
         fi
