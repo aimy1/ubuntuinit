@@ -887,6 +887,7 @@ declare -a _UI_MAIN_MENU_ITEMS=(
     "web_cat:🌐  Web 服务器"
     "monitor_cat:📊  监控系统"
     "custom:🎛  自定义选择模块"
+    "games:🎮  终端娱乐小游戏"
     "quit:❌  退出"
 )
 
@@ -937,6 +938,22 @@ ui_main_menu() {
                 local IFS=','
                 echo "${all_vals[*]}"
                 return 0
+                ;;
+
+            games)
+                local launcher="${SCRIPT_DIR}/games/launcher.sh"
+                if [[ -f "${launcher}" ]]; then
+                    # 临时恢复终端的键盘回显和光标，保证小游戏可正常读取输入
+                    stty echo 2>/dev/null || true
+                    printf '\033[?25h' >&2
+                    bash "${launcher}"
+                    # 重新回归 TUI 的隐藏光标和禁用键盘回显状态
+                    stty -echo 2>/dev/null || true
+                    printf '\033[?25l' >&2
+                else
+                    ui_confirm "未找到终端游戏启动器 (${launcher})" "yes" >/dev/null
+                fi
+                continue
                 ;;
 
             quit)
