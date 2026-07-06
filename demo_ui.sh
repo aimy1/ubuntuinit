@@ -117,7 +117,7 @@ demo_progress() {
         sleep 0.6
         ui_progress "${mod}" "${i}" "${total}" "✓ 完成"
         echo ""
-        (( i++ )) || true
+        (( i++ ))
     done
 }
 

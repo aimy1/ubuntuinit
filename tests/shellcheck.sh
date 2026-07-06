@@ -110,7 +110,7 @@ declare -a FAILED_FILES=()
 declare -a WARNING_FILES=()
 
 for filepath in "${SHELL_FILES[@]}"; do
-    (( TOTAL++ )) || true
+    (( TOTAL++ ))
 
     # 获取相对路径（用于显示）
     local_path="${filepath#"${PROJECT_ROOT}/"}"
@@ -118,20 +118,20 @@ for filepath in "${SHELL_FILES[@]}"; do
     display_name="$(printf '%-32s' "${local_path}")"
 
     # 执行 shellcheck（捕获退出码）
-    sc_exit=0
-    sc_output="$(shellcheck "${SC_OPTS[@]}" "${filepath}" 2>&1)" || sc_exit=$?
+    sc_output="$(shellcheck "${SC_OPTS[@]}" "${filepath}" 2>&1)"
+    sc_exit=$?
 
     if [[ "${sc_exit}" -eq 0 ]]; then
-        (( PASSED++ )) || true
+        (( PASSED++ ))
         if [[ "${OPT_QUIET}" != "true" ]]; then
             echo -e "  ${display_name}  ${GREEN}✓ 通过${RESET}"
         fi
     else
         # 判断是否只有 WARNING（exit=1）还是有 ERROR（exit>=2）
         if echo "${sc_output}" | grep -q "warning:"; then
-            (( WARNINGS++ )) || true
+            (( WARNINGS++ ))
             if [[ "${OPT_STRICT}" == "true" ]]; then
-                (( FAILED++ )) || true
+                (( FAILED++ ))
                 FAILED_FILES+=("${local_path}")
                 echo -e "  ${display_name}  ${YELLOW}⚠ 警告${RESET}"
             else
@@ -139,7 +139,7 @@ for filepath in "${SHELL_FILES[@]}"; do
                 WARNING_FILES+=("${local_path}")
             fi
         else
-            (( FAILED++ )) || true
+            (( FAILED++ ))
             FAILED_FILES+=("${local_path}")
             echo -e "  ${display_name}  ${RED}✗ 错误${RESET}"
         fi

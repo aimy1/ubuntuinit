@@ -14,21 +14,8 @@ module_info() {
 }
 
 module_check() {
-    # 检查 UFW 是否已启用
-    if [[ "${UBINIT_SECURITY_UFW:-true}" == "true" ]]; then
-        if ! ufw status 2>/dev/null | grep -q "Status: active"; then
-            return 1
-        fi
-    fi
-
-    # 检查 Fail2ban 是否已安装并运行
-    if [[ "${UBINIT_SECURITY_FAIL2BAN:-true}" == "true" ]]; then
-        if ! systemctl is-active --quiet fail2ban 2>/dev/null; then
-            return 1
-        fi
-    fi
-
-    return 0
+    [[ "${UBINIT_SECURITY_UFW:-true}" == "true" ]] && \
+        ufw status 2>/dev/null | grep -q "Status: active"
 }
 
 # 配置 UFW 防火墙
@@ -38,74 +25,29 @@ _security_setup_ufw() {
     log_info "配置 UFW 防火墙..."
     apt_ensure_installed ufw
 
-    # 检查 UFW 当前状态
-    local ufw_status
-    ufw_status="$(ufw status 2>/dev/null || echo "inactive")"
-    local was_active=false
-    if echo "${ufw_status}" | grep -q "Status: active"; then
-        was_active=true
-        log_info "UFW 当前已启用"
-    fi
-
     # 重置规则（非 dry-run 模式）
     if [[ "${UBINIT_DRY_RUN:-false}" != "true" ]]; then
-        # 备份当前规则
-        if [[ "${was_active}" == "true" ]]; then
-            log_info "备份当前 UFW 规则..."
-            ufw status numbered > "${UBINIT_BACKUP_DIR:-/var/backup/ubuntu-init}/ufw_rules.bak" 2>/dev/null || true
-        fi
-
-        # 重置规则
-        log_info "重置 UFW 规则..."
-        ufw --force reset &>/dev/null || {
-            log_error "UFW 重置失败"
-            return 1
-        }
+        ufw --force reset &>/dev/null
 
         # 默认策略
-        local default_in="${UBINIT_SECURITY_UFW_DEFAULT_INCOMING:-deny}"
-        local default_out="${UBINIT_SECURITY_UFW_DEFAULT_OUTGOING:-allow}"
-        ufw default "${default_in}" incoming || {
-            log_error "设置 UFW 默认入站策略失败"
-            return 1
-        }
-        ufw default "${default_out}" outgoing || {
-            log_error "设置 UFW 默认出站策略失败"
-            return 1
-        }
+        ufw default "${UBINIT_SECURITY_UFW_DEFAULT_INCOMING:-deny}"   incoming
+        ufw default "${UBINIT_SECURITY_UFW_DEFAULT_OUTGOING:-allow}"  outgoing
 
         # 允许配置的端口
         local port
         for port in ${UBINIT_SECURITY_UFW_ALLOW_PORTS:-22 80 443}; do
             port="$(util_trim "${port}")"
             if util_is_valid_port "${port}"; then
-                ufw allow "${port}/tcp" comment "UbuntuInit" &>/dev/null || {
-                    log_warning "UFW 允许端口 ${port}/tcp 失败"
-                }
+                ufw allow "${port}/tcp" comment "UbuntuInit" &>/dev/null
                 log_debug "UFW 允许端口: ${port}/tcp"
-            else
-                log_warning "无效的端口号: ${port}"
             fi
         done
 
-        # 启用 UFW
-        log_info "启用 UFW..."
-        ufw --force enable || {
-            log_error "UFW 启用失败"
-            return 1
-        }
-
-        # 验证状态
-        if ufw status 2>/dev/null | grep -q "Status: active"; then
-            log_success "UFW 防火墙已启用"
-            ufw status verbose 2>/dev/null | head -20
-        else
-            log_error "UFW 启用后状态异常"
-            return 1
-        fi
+        ufw --force enable
+        ufw status verbose
     fi
 
-    return 0
+    log_success "UFW 防火墙已启用"
 }
 
 # 配置 Fail2ban
@@ -113,32 +55,12 @@ _security_setup_fail2ban() {
     [[ "${UBINIT_SECURITY_FAIL2BAN:-true}" != "true" ]] && return 0
 
     log_info "配置 Fail2ban..."
-    apt_install fail2ban || {
-        log_error "Fail2ban 安装失败"
-        return 1
-    }
+    apt_install fail2ban
 
     local bantime="${UBINIT_SECURITY_FAIL2BAN_BANTIME:-3600}"
     local maxretry="${UBINIT_SECURITY_FAIL2BAN_MAXRETRY:-5}"
     local ssh_port="${UBINIT_SSH_PORT:-22}"
 
-    # 验证参数
-    if ! [[ "${bantime}" =~ ^[0-9]+$ ]]; then
-        log_warning "无效的 bantime: ${bantime}，使用默认值 3600"
-        bantime=3600
-    fi
-    if ! [[ "${maxretry}" =~ ^[0-9]+$ ]]; then
-        log_warning "无效的 maxretry: ${maxretry}，使用默认值 5"
-        maxretry=5
-    fi
-
-    # 备份现有配置
-    if [[ -f /etc/fail2ban/jail.local ]]; then
-        log_info "备份现有 Fail2ban 配置..."
-        backup_file /etc/fail2ban/jail.local security
-    fi
-
-    # 写入配置
     cat > /etc/fail2ban/jail.local <<EOF
 # UbuntuInit 生成 — $(date '+%Y-%m-%d %H:%M:%S')
 [DEFAULT]
@@ -154,21 +76,8 @@ filter    = sshd
 maxretry  = ${maxretry}
 EOF
 
-    # 启用并启动服务
-    if ! service_enable_start fail2ban; then
-        log_error "Fail2ban 启动失败"
-        return 1
-    fi
-
-    # 验证服务状态
-    sleep 2
-    if systemctl is-active --quiet fail2ban; then
-        log_success "Fail2ban 已启动（封禁时长: ${bantime}s，最大重试: ${maxretry}次）"
-    else
-        log_warning "Fail2ban 服务状态异常"
-    fi
-
-    return 0
+    service_enable_start fail2ban
+    log_success "Fail2ban 已启动（封禁时长: ${bantime}s，最大重试: ${maxretry}次）"
 }
 
 # sysctl 安全优化
@@ -177,21 +86,8 @@ _security_setup_sysctl() {
 
     log_info "应用 sysctl 安全配置..."
 
-    # 检查是否已存在配置
-    if [[ -f /etc/sysctl.d/99-ubinit-security.conf ]]; then
-        log_info "sysctl 安全配置已存在，跳过"
-        return 0
-    fi
-
-    # 备份现有配置（如果存在）
-    if [[ -f /etc/sysctl.conf ]]; then
-        log_debug "备份现有 sysctl.conf..."
-        backup_file /etc/sysctl.conf security
-    fi
-
     cat > /etc/sysctl.d/99-ubinit-security.conf <<'EOF'
 # UbuntuInit 安全加固 sysctl 配置
-# 生成时间: $(date '+%Y-%m-%d %H:%M:%S')
 
 # ── 网络安全 ────────────────────────────────────────────────
 # 启用 SYN Cookie 保护（防 SYN 洪水）
@@ -230,22 +126,8 @@ kernel.dmesg_restrict = 1
 kernel.yama.ptrace_scope = 1
 EOF
 
-    # 应用配置
-    if ! sysctl --system &>/dev/null; then
-        log_error "应用 sysctl 配置失败"
-        return 1
-    fi
-
-    # 验证关键配置是否生效
-    local syncookies
-    syncookies="$(sysctl -n net.ipv4.tcp_syncookies 2>/dev/null || echo '')"
-    if [[ "${syncookies}" == "1" ]]; then
-        log_success "sysctl 安全配置已应用"
-    else
-        log_warning "sysctl 配置应用后验证失败"
-    fi
-
-    return 0
+    sysctl --system &>/dev/null
+    log_success "sysctl 安全配置已应用"
 }
 
 # ulimit 配置

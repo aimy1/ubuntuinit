@@ -56,12 +56,12 @@ assert_eq() {
     local desc="$1"
     local expected="$2"
     local actual="$3"
-    (( TOTAL++ )) || true
+    (( TOTAL++ ))
     if [[ "${expected}" == "${actual}" ]]; then
-        (( PASSED++ )) || true
+        (( PASSED++ ))
         echo -e "  ${GREEN}✓${RESET} ${desc}"
     else
-        (( FAILED++ )) || true
+        (( FAILED++ ))
         echo -e "  ${RED}✗${RESET} ${desc}"
         echo -e "    期望: ${expected}"
         echo -e "    实际: ${actual}"
@@ -71,12 +71,12 @@ assert_eq() {
 assert_cmd() {
     local desc="$1"
     shift
-    (( TOTAL++ )) || true
+    (( TOTAL++ ))
     if "$@" &>/dev/null 2>&1; then
-        (( PASSED++ )) || true
+        (( PASSED++ ))
         echo -e "  ${GREEN}✓${RESET} ${desc}"
     else
-        (( FAILED++ )) || true
+        (( FAILED++ ))
         echo -e "  ${RED}✗${RESET} ${desc}"
     fi
 }
@@ -84,12 +84,12 @@ assert_cmd() {
 assert_file_exists() {
     local desc="$1"
     local path="$2"
-    (( TOTAL++ )) || true
+    (( TOTAL++ ))
     if [[ -f "${path}" ]]; then
-        (( PASSED++ )) || true
+        (( PASSED++ ))
         echo -e "  ${GREEN}✓${RESET} ${desc}"
     else
-        (( FAILED++ )) || true
+        (( FAILED++ ))
         echo -e "  ${RED}✗${RESET} ${desc}: 文件不存在 ${path}"
     fi
 }
@@ -162,14 +162,14 @@ test_module_interface() {
             fi
         done
 
-        (( TOTAL++ )) || true
+        (( TOTAL++ ))
         if [[ ${#missing_funcs[@]} -eq 0 ]]; then
-            (( PASSED++ )) || true
+            (( PASSED++ ))
             if [[ "${OPT_QUIET:-false}" != "true" ]]; then
                 echo -e "  ${GREEN}✓${RESET} ${module_name} — 接口完整"
             fi
         else
-            (( FAILED++ )) || true
+            (( FAILED++ ))
             echo -e "  ${RED}✗${RESET} ${module_name} — 缺少函数: ${missing_funcs[*]}"
         fi
     done < <(find "${module_dir}" -name "*.sh" -print0 2>/dev/null | sort -z)
@@ -205,12 +205,12 @@ test_lib_files_exist() {
     # 检查模块数量
     local module_count
     module_count="$(find "${PROJECT_ROOT}/modules" -name "*.sh" 2>/dev/null | wc -l)"
-    (( TOTAL++ )) || true
+    (( TOTAL++ ))
     if [[ "${module_count}" -ge 29 ]]; then
-        (( PASSED++ )) || true
+        (( PASSED++ ))
         echo -e "  ${GREEN}✓${RESET} modules/ 模块数量: ${module_count} (>= 29)"
     else
-        (( FAILED++ )) || true
+        (( FAILED++ ))
         echo -e "  ${RED}✗${RESET} modules/ 模块数量: ${module_count} (期望 >= 29)"
     fi
 }

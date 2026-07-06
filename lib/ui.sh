@@ -167,11 +167,30 @@ _ui_hline() {
     printf "${UI_C_BORDER}%s%s%s${UI_C_RESET}\n" "${l}" "${mid}" "${r}"
 }
 
-# 绘制内容行（带边框）
-# 参数: $1=内容（已含颜色）$2=内容可见长度（用于右边对齐填充）
+# 获取字符串在终端的实际显示宽度（中英文+表情自适应）
+_ui_string_width() {
+    local str="$1"
+    # 移除 ANSI 颜色转义码
+    local clean
+    clean="$(echo -e "${str}" | sed 's/\x1b\[[0-9;]*m//g' 2>/dev/null)"
+    local w
+    w="$(echo -n "${clean}" | wc -L 2>/dev/null)"
+    if [[ "${w}" =~ ^[0-9]+$ ]]; then
+        echo "${w}"
+    else
+        # 备用方案：将非 ASCII 字符替换为 2 个点以估算显示宽度
+        echo -n "${clean}" | sed 's/[^\x00-\x7f]/../g' 2>/dev/null | wc -c
+    fi
+}
+
+# 绘制内容行（带边框，支持中英文自适应对齐）
+# 参数: $1=内容（已含颜色）$2=内容可见长度（可选，默认自动计算）
 _ui_row() {
     local content="$1"
-    local visible_len="${2:-0}"
+    local visible_len="${2:-}"
+    if [[ -z "${visible_len}" ]]; then
+        visible_len="$(_ui_string_width "${content}")"
+    fi
     local pad=$(( UI_INNER_W - visible_len ))
     (( pad < 0 )) && pad=0
     printf "${UI_C_BORDER}│${UI_C_RESET} %s%*s ${UI_C_BORDER}│${UI_C_RESET}\n" \
@@ -184,14 +203,17 @@ _ui_empty_row() {
         "$(( UI_MENU_WIDTH - 2 ))" ''
 }
 
-# 居中文本（纯 ASCII 宽度，不含颜色转义）
-# 参数: $1=文本（无颜色） $2=宽度
+# 居中文本（自适应多字节字符宽度）
+# 参数: $1=文本（含或不含颜色） $2=宽度
 _ui_center() {
     local text="$1"
     local width="${2:-${UI_INNER_W}}"
-    local len="${#text}"
+    local len
+    len="$(_ui_string_width "${text}")"
     local lpad=$(( (width - len) / 2 ))
     local rpad=$(( width - len - lpad ))
+    (( lpad < 0 )) && lpad=0
+    (( rpad < 0 )) && rpad=0
     printf "%*s%s%*s" "${lpad}" '' "${text}" "${rpad}" ''
 }
 
@@ -267,6 +289,7 @@ ui_system_info() {
     _ui_info_row "  CPU"      "${cpu_model:0:38}"
     _ui_info_row "  内存"     "${mem_free} 可用 / ${mem_total} 总计"
     _ui_info_row "  IP 地址"  "${ip_addr}"
+    _ui_info_row "  框架作者" "aisaniya"
     printf "  ${UI_C_BORDER}╰──────────────────────────────────────────────────────╯${UI_C_RESET}\n\n"
 }
 
@@ -274,7 +297,7 @@ ui_system_info() {
 # 7. 单选菜单（↑↓ 方向键）
 # =============================================================================
 
-# 内部：渲染所有菜单行（仅行，不含外框）
+# 内部：渲染所有菜单行（仅行，不含外框，支持中英文自适应对齐）
 # 参数: $1=当前选中索引  $2=items数组名（nameref）
 _ui_render_menu_items() {
     local sel="$1"
@@ -284,15 +307,21 @@ _ui_render_menu_items() {
     for entry in "${__items[@]}"; do
         # entry 格式: "value:图标 显示标签" 或 "value:显示标签"
         local label="${entry#*:}"
-        local prefix="    "  # 4 spaces indent
+        local label_len
+        label_len="$(_ui_string_width "${label}")"
 
         if (( i == sel )); then
-            # 高亮行
-            printf "${UI_C_BORDER}│${UI_C_RESET}${UI_C_SEL_BG} ${UI_C_SEL_FG}${UI_C_BOLD}${UI_ICON_CURSOR} %-*s${UI_C_RESET}${UI_C_SEL_BG}  ${UI_C_RESET}${UI_C_BORDER}│${UI_C_RESET}\n" \
-                "$(( UI_MENU_WIDTH - 7 ))" "${label}"
+            # 高亮行：光标 (❯) 占 2 字符，左侧 1 空格，右侧 2 空格
+            local pad=$(( UI_MENU_WIDTH - 7 - label_len ))
+            (( pad < 0 )) && pad=0
+            printf "${UI_C_BORDER}│${UI_C_RESET}${UI_C_SEL_BG} ${UI_C_SEL_FG}${UI_C_BOLD}${UI_ICON_CURSOR} %s%*s${UI_C_RESET}${UI_C_SEL_BG}  ${UI_C_RESET}${UI_C_BORDER}│${UI_C_RESET}\n" \
+                "${label}" "${pad}" ''
         else
-            printf "${UI_C_BORDER}│${UI_C_RESET}   ${UI_C_MUTED}  %-*s${UI_C_RESET}  ${UI_C_BORDER}│${UI_C_RESET}\n" \
-                "$(( UI_MENU_WIDTH - 8 ))" "${label}"
+            # 普通行：左侧 5 空格缩进，右侧 2 空格
+            local pad=$(( UI_MENU_WIDTH - 8 - label_len ))
+            (( pad < 0 )) && pad=0
+            printf "${UI_C_BORDER}│${UI_C_RESET}   ${UI_C_MUTED}  %s%*s${UI_C_RESET}  ${UI_C_BORDER}│${UI_C_RESET}\n" \
+                "${label}" "${pad}" ''
         fi
         (( i++ ))
     done
@@ -387,33 +416,63 @@ ui_menu() {
 # 8. 多选复选列表（↑↓+Space）
 # =============================================================================
 
+# 内部：绘制复选列表中的单行（支持中英文+表情自适应对齐）
+# 参数: $1=索引 $2=是否当前行(0/1) $3=items数组名 $4=checked数组名
+_ui_draw_checklist_row() {
+    local idx="$1"
+    local is_current="$2"
+    local items_name="$3"
+    local chk_name="$4"
+    local -n __row_items="${items_name}"
+    local -n __row_chk="${chk_name}"
+
+    local entry="${__row_items[$idx]}"
+    local value="${entry%%:*}"
+    local label="${entry#*:}"
+    local num_checked="${__row_chk[$idx]:-0}"
+
+    local check_icon status_icon
+    if (( num_checked )); then
+        check_icon="${UI_C_ACCENT}${UI_ICON_CHECK}${UI_C_RESET}"
+    else
+        check_icon="${UI_C_MUTED}${UI_ICON_UNCHECK}${UI_C_RESET}"
+    fi
+
+    if _ui_check_module_installed "${value}"; then
+        status_icon="${UI_C_INSTALLED}✓${UI_C_RESET}"
+    else
+        status_icon="${UI_C_NOT_INSTALLED}○${UI_C_RESET}"
+    fi
+
+    local label_len
+    label_len="$(_ui_string_width "${label}")"
+    # 图标和边框固定占位14个字符
+    local pad=$(( UI_MENU_WIDTH - 14 - label_len ))
+    (( pad < 0 )) && pad=0
+
+    if (( is_current )); then
+        printf "${UI_C_BORDER}│${UI_C_RESET}${UI_C_SEL_BG} ${UI_C_SEL_FG}${UI_C_BOLD}${UI_ICON_CURSOR}${UI_C_RESET}${UI_C_SEL_BG} %b ${UI_C_SEL_FG}%s%*s ${UI_C_RESET}${UI_C_SEL_BG}%b${UI_C_RESET}${UI_C_SEL_BG} ${UI_C_RESET}${UI_C_BORDER}│${UI_C_RESET}\n" \
+            "${check_icon}" "${label}" "${pad}" '' "${status_icon}" >&2
+    else
+        printf "${UI_C_BORDER}│${UI_C_RESET}    %b ${UI_C_MUTED}%s%*s ${UI_C_RESET}%b  ${UI_C_BORDER}│${UI_C_RESET}\n" \
+            "${check_icon}" "${label}" "${pad}" '' "${status_icon}" >&2
+    fi
+}
+
 # 内部：渲染所有复选行
 # 参数: $1=当前光标行  $2=checked数组名  $3=items数组名
 _ui_render_checklist_items() {
     local cur="$1"
-    local -n __chk="$2"
-    local -n __cl_items="$3"
+    local chk_name="$2"
+    local items_name="$3"
+    local -n __cl_items="${items_name}"
+    local total="${#__cl_items[@]}"
     local i=0
 
-    for entry in "${__cl_items[@]}"; do
-        local label="${entry#*:}"
-        local check_icon
-        local num_checked="${__chk[$i]:-0}"
-
-        if (( num_checked )); then
-            check_icon="${UI_C_ACCENT}${UI_ICON_CHECK}${UI_C_RESET}"
-        else
-            check_icon="${UI_C_MUTED}${UI_ICON_UNCHECK}${UI_C_RESET}"
-        fi
-
-        if (( i == cur )); then
-            printf "${UI_C_BORDER}│${UI_C_RESET}${UI_C_SEL_BG} ${UI_C_SEL_FG}${UI_C_BOLD}${UI_ICON_CURSOR}${UI_C_RESET}${UI_C_SEL_BG} %s ${UI_C_SEL_FG}%-*s${UI_C_RESET}${UI_C_SEL_BG} ${UI_C_RESET}${UI_C_BORDER}│${UI_C_RESET}\n" \
-                "${check_icon}" "$(( UI_MENU_WIDTH - 10 ))" "${label}"
-        else
-            printf "${UI_C_BORDER}│${UI_C_RESET}    %s ${UI_C_MUTED}%-*s${UI_C_RESET}  ${UI_C_BORDER}│${UI_C_RESET}\n" \
-                "${check_icon}" "$(( UI_MENU_WIDTH - 10 ))" "${label}"
-        fi
-        (( i++ ))
+    for (( i=0; i<total; i++ )); do
+        local is_current=0
+        (( i == cur )) && is_current=1
+        _ui_draw_checklist_row "${i}" "${is_current}" "${items_name}" "${chk_name}"
     done
 }
 

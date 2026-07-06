@@ -135,9 +135,11 @@ _rheader() {
 report_print_summary() {
     echo ""
     echo ""
-    printf "  ${LOG_CLR_SUCCESS:-}${LOG_CLR_BOLD:-}╔══════════════════════════════════════════════╗${LOG_CLR_RESET:-}\n"
-    printf "  ${LOG_CLR_SUCCESS:-}${LOG_CLR_BOLD:-}║      UbuntuInit 安装报告  %-18s║${LOG_CLR_RESET:-}\n" "${_R_REPORT_TIME}"
-    printf "  ${LOG_CLR_SUCCESS:-}${LOG_CLR_BOLD:-}╚══════════════════════════════════════════════╝${LOG_CLR_RESET:-}\n"
+    printf "  ${LOG_CLR_SUCCESS:-}${LOG_CLR_BOLD:-}╭──────────────────────────────────────────────╮${LOG_CLR_RESET:-}\n"
+    printf "  ${LOG_CLR_SUCCESS:-}${LOG_CLR_BOLD:-}│      UbuntuInit 安装报告 (by aisaniya)       │${LOG_CLR_RESET:-}\n"
+    printf "  ${LOG_CLR_SUCCESS:-}${LOG_CLR_BOLD:-}├──────────────────────────────────────────────┤${LOG_CLR_RESET:-}\n"
+    printf "  ${LOG_CLR_SUCCESS:-}${LOG_CLR_BOLD:-}│  生成时间: %-32s  │${LOG_CLR_RESET:-}\n" "${_R_REPORT_TIME}"
+    printf "  ${LOG_CLR_SUCCESS:-}${LOG_CLR_BOLD:-}╰──────────────────────────────────────────────╯${LOG_CLR_RESET:-}\n"
 
     _rheader "系统基础"
     _rprint "操作系统:"     "${_R_OS}"
@@ -191,8 +193,9 @@ _report_generate_markdown() {
     cat > "${report_file}" <<MARKDOWN
 # UbuntuInit 安装报告
 
-> 生成时间: ${_R_REPORT_TIME}
-> 安装耗时: ${_R_INSTALL_DURATION}
+> **Author**: aisaniya
+> **生成时间**: ${_R_REPORT_TIME}
+> **安装耗时**: ${_R_INSTALL_DURATION}
 
 ---
 
@@ -269,7 +272,7 @@ _report_generate_markdown() {
 
 ---
 
-*由 UbuntuInit v${SCRIPT_VERSION:-1.0.0} 自动生成*
+*由 UbuntuInit v${SCRIPT_VERSION:-1.0.0} (by aisaniya) 自动生成*
 MARKDOWN
 }
 
