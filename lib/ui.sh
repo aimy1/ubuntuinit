@@ -895,7 +895,7 @@ declare -a _UI_MAIN_MENU_ITEMS=(
     "security_cat:🔒  安全加固"
     "docker_cat:🐳  Docker 环境"
     "dev_cat:🛠  开发工具"
-    "db_cat:🗄  数据库服务"
+    "database_cat:🗄  数据库服务"
     "web_cat:🌐  Web 服务器"
     "monitor_cat:📊  监控系统"
     "custom:🎛  自定义选择模块"
@@ -910,6 +910,7 @@ _ui_category_to_checklist() {
     local category="$1"
     local -n _result_arr="$2"
     local -a module_aliases
+    local IFS=$' \t\n'
     # shellcheck disable=SC2206
     module_aliases=( ${_UI_CATEGORY_MODULES["${category}"]:-} )
 
@@ -939,6 +940,9 @@ ui_main_menu() {
         if ! choice="$(ui_menu '  主菜单  ' "${_UI_MAIN_MENU_ITEMS[@]}")"; then
             return 1
         fi
+
+        # 调试诊断输出：输出实际捕获的值与转义控制符
+        printf "\n[DEBUG] 选中菜单项的值为: %q (请截图此输出)\n" "${choice}" >&2
 
         case "${choice}" in
             full)
