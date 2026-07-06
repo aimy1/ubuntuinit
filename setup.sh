@@ -100,17 +100,34 @@ log_info "安装目标:   ${INSTALL_DIR}/ubinit"
     log_info "游戏命令:   ${INSTALL_DIR}/ugames"
 echo ""
 
-# ── 验证源文件 ─────────────────────────────────────────────────────────────
-if [[ ! -f "${UBINIT_SCRIPT}" ]]; then
-    log_err "找不到 ubinit 脚本: ${UBINIT_SCRIPT}"
-    log_err "请确认从项目根目录运行: sudo bash setup.sh"
-    exit 1
-fi
+# ── 自动克隆仓库（若作为独立脚本运行，支持一键命令直接管道执行） ──────────────────
+if [[ ! -f "${UBINIT_SCRIPT}" ]] || [[ ! -f "${INSTALL_SCRIPT}" ]]; then
+    log_warn "检测到作为独立脚本运行，正在拉取完整仓库..."
 
-if [[ ! -f "${INSTALL_SCRIPT}" ]]; then
-    log_err "找不到主程序: ${INSTALL_SCRIPT}"
-    log_err "请确认项目文件完整"
-    exit 1
+    # 确保有 git 命令
+    if ! command -v git &>/dev/null; then
+        log_info "正在安装 git..."
+        apt-get update -y -q &>/dev/null || true
+        apt-get install -y -q git &>/dev/null || true
+    fi
+
+    if ! command -v git &>/dev/null; then
+        log_err "系统中缺少 git 且自动安装失败，请手动安装后重试。"
+        exit 1
+    fi
+
+    CLONE_DIR="/opt/ubuntuinit"
+    log_info "正在拉取最新代码到: ${CLONE_DIR}..."
+    rm -rf "${CLONE_DIR}"
+
+    if git clone --depth=1 https://github.com/aimy1/ubuntuinit.git "${CLONE_DIR}" &>/dev/null; then
+        log_ok "代码拉取成功！移交执行权限..."
+        # 移交执行（保持相同的参数传递）
+        exec bash "${CLONE_DIR}/setup.sh" "$@"
+    else
+        log_err "拉取代码失败，请检查网络连接。"
+        exit 1
+    fi
 fi
 
 # ── 赋予脚本可执行权限 ─────────────────────────────────────────────────────
