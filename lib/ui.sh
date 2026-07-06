@@ -244,6 +244,10 @@ LOGO
     printf "  ${UI_C_MUTED}%s${UI_C_RESET}\n" \
         "支持: Ubuntu 20.04 / 22.04 / 24.04 / 26.04  ·  amd64 / arm64"
     printf '\n'
+    printf "  ${UI_C_MUTED}世界在滚动更新，Ubuntu 在长期支持${UI_C_RESET}\n"
+    printf "  ${UI_C_DIM}LTS = Long Time Stagnation${UI_C_RESET}\n"
+    printf "  ${UI_C_DIM}Made with ♥ by aisaniya${UI_C_RESET}\n"
+    printf '\n'
 
     # 渐变分隔线
     printf "  ${UI_C_PRIMARY}"
