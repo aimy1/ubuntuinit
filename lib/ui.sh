@@ -83,22 +83,22 @@ _ui_term_rows() {
 }
 
 # 隐藏光标
-_ui_cursor_hide() { printf '\033[?25l'; }
+_ui_cursor_hide() { printf '\033[?25l' >&2; }
 
 # 显示光标
-_ui_cursor_show() { printf '\033[?25h'; }
+_ui_cursor_show() { printf '\033[?25h' >&2; }
 
 # 清屏
-_ui_clear() { printf '\033[2J\033[H'; }
+_ui_clear() { printf '\033[2J\033[H' >&2; }
 
 # 向上移动 N 行并回到行首
 _ui_cursor_up() {
     local n="${1:-1}"
-    printf "\033[%dA\r" "${n}"
+    printf "\033[%dA\r" "${n}" >&2
 }
 
 # 清除从光标到行尾
-_ui_erase_line() { printf '\033[K'; }
+_ui_erase_line() { printf '\033[K' >&2; }
 
 # =============================================================================
 # 3. 按键读取（核心：解析 ANSI 转义序列）
@@ -948,7 +948,8 @@ ui_main_menu() {
                     all_vals+=("${entry%%:*}")
                 done
                 local IFS=','
-                echo "${all_vals[*]}"
+                UBINIT_SELECTED_MODULES="${all_vals[*]}"
+                export UBINIT_SELECTED_MODULES
                 return 0
                 ;;
 
@@ -978,7 +979,8 @@ ui_main_menu() {
                 local selected_mods
                 if selected_mods="$(ui_checklist '  选择要安装的模块  ' "${_UI_ALL_MODULES[@]}")"; then
                     if [[ -n "${selected_mods}" ]]; then
-                        echo "${selected_mods}"
+                        UBINIT_SELECTED_MODULES="${selected_mods}"
+                        export UBINIT_SELECTED_MODULES
                         return 0
                     else
                         # 未选任何模块，提示后回到主菜单
@@ -1019,7 +1021,8 @@ ui_main_menu() {
                 local selected_mods
                 if selected_mods="$(ui_checklist "${cat_title}" "${cat_items[@]}")"; then
                     if [[ -n "${selected_mods}" ]]; then
-                        echo "${selected_mods}"
+                        UBINIT_SELECTED_MODULES="${selected_mods}"
+                        export UBINIT_SELECTED_MODULES
                         return 0
                     fi
                 fi

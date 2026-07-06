@@ -412,13 +412,11 @@ run_all_modules() {
 # 运行 TUI 菜单，让用户选择要安装的模块
 run_interactive_menu() {
     log_info "进入交互模式..."
-    local selected
-    selected="$(ui_main_menu)" || {
+    # 直接前台运行，菜单返回 0 时全局变量 UBINIT_SELECTED_MODULES 已经自动被修改并 export
+    ui_main_menu || {
         log_info "用户取消，退出"
         exit 0
     }
-    UBINIT_SELECTED_MODULES="${selected}"
-    export UBINIT_SELECTED_MODULES
 }
 
 # =============================================================================
