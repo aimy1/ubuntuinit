@@ -164,7 +164,7 @@ _ui_hline() {
     local l="$1" f="$2" r="$3" w="$4"
     local mid
     mid="$(printf "${f}%.0s" $(seq 1 $(( w - 2 ))))"
-    printf "${UI_C_BORDER}%s%s%s${UI_C_RESET}\n" "${l}" "${mid}" "${r}"
+    printf "${UI_C_BORDER}%s%s%s${UI_C_RESET}\n" "${l}" "${mid}" "${r}" >&2
 }
 
 # 获取字符串在终端的实际显示宽度（中英文+表情自适应）
@@ -194,13 +194,13 @@ _ui_row() {
     local pad=$(( UI_INNER_W - visible_len ))
     (( pad < 0 )) && pad=0
     printf "${UI_C_BORDER}│${UI_C_RESET} %s%*s ${UI_C_BORDER}│${UI_C_RESET}\n" \
-        "${content}" "${pad}" ''
+        "${content}" "${pad}" '' >&2
 }
 
 # 绘制空内容行
 _ui_empty_row() {
     printf "${UI_C_BORDER}│${UI_C_RESET}%*s${UI_C_BORDER}│${UI_C_RESET}\n" \
-        "$(( UI_MENU_WIDTH - 2 ))" ''
+        "$(( UI_MENU_WIDTH - 2 ))" '' >&2
 }
 
 # 居中文本（自适应多字节字符宽度）
@@ -223,13 +223,14 @@ _ui_center() {
 
 # 打印 ASCII Art 横幅
 ui_banner() {
-    local ver="${SCRIPT_VERSION:-1.0.0}"
-    local cols
-    cols="$(_ui_term_cols)"
+    {
+        local ver="${SCRIPT_VERSION:-1.0.0}"
+        local cols
+        cols="$(_ui_term_cols)"
 
-    printf '\n'
-    printf "${UI_C_PRIMARY}${UI_C_BOLD}"
-    cat <<'LOGO'
+        printf '\n'
+        printf "${UI_C_PRIMARY}${UI_C_BOLD}"
+        cat <<'LOGO'
   ██╗   ██╗██████╗ ██╗   ██╗███╗  ██╗████████╗██╗   ██╗
   ██║   ██║██╔══██╗██║   ██║████╗ ██║╚══██╔══╝██║   ██║
   ██║   ██║██████╔╝██║   ██║██╔██╗██║   ██║   ██║   ██║
@@ -237,22 +238,23 @@ ui_banner() {
   ╚██████╔╝╚█████╔╝╚██████╔╝██║ ╚███║   ██║   ╚██████╔╝
    ╚═════╝  ╚════╝  ╚═════╝ ╚═╝  ╚══╝   ╚═╝    ╚═════╝
 LOGO
-    printf "${UI_C_RESET}\n"
+        printf "${UI_C_RESET}\n"
 
-    printf "  ${UI_C_MUTED}%s${UI_C_RESET}\n" \
-        "Ubuntu Server 一键初始化框架  ·  v${ver}"
-    printf "  ${UI_C_MUTED}%s${UI_C_RESET}\n" \
-        "支持: Ubuntu 20.04 / 22.04 / 24.04 / 26.04  ·  amd64 / arm64"
-    printf '\n'
-    printf "  ${UI_C_MUTED}世界在滚动更新，Ubuntu 在长期支持${UI_C_RESET}\n"
-    printf "  ${UI_C_DIM}LTS = Long Time Stagnation${UI_C_RESET}\n"
-    printf "  ${UI_C_DIM}Made with ♥ by aisaniya${UI_C_RESET}\n"
-    printf '\n'
+        printf "  ${UI_C_MUTED}%s${UI_C_RESET}\n" \
+            "Ubuntu Server 一键初始化框架  ·  v${ver}"
+        printf "  ${UI_C_MUTED}%s${UI_C_RESET}\n" \
+            "支持: Ubuntu 20.04 / 22.04 / 24.04 / 26.04  ·  amd64 / arm64"
+        printf '\n'
+        printf "  ${UI_C_MUTED}世界在滚动更新，Ubuntu 在长期支持${UI_C_RESET}\n"
+        printf "  ${UI_C_DIM}LTS = Long Time Stagnation${UI_C_RESET}\n"
+        printf "  ${UI_C_DIM}Made with ♥ by aisaniya${UI_C_RESET}\n"
+        printf '\n'
 
-    # 渐变分隔线
-    printf "  ${UI_C_PRIMARY}"
-    printf '─%.0s' $(seq 1 54)
-    printf "${UI_C_RESET}\n\n"
+        # 渐变分隔线
+        printf "  ${UI_C_PRIMARY}"
+        printf '─%.0s' $(seq 1 54)
+        printf "${UI_C_RESET}\n\n"
+    } >&2
 }
 
 # =============================================================================
@@ -270,31 +272,33 @@ _ui_info_row() {
 
 # 显示系统信息面板（在主菜单上方展示）
 ui_system_info() {
-    local os_name os_version kernel arch hostname
-    local cpu_model mem_total mem_free ip_addr
+    {
+        local os_name os_version kernel arch hostname
+        local cpu_model mem_total mem_free ip_addr
 
-    os_name="$(. /etc/os-release 2>/dev/null && echo "${NAME:-Unknown}" || echo 'Unknown')"
-    os_version="$(. /etc/os-release 2>/dev/null && echo "${VERSION_ID:-?}" || echo '?')"
-    kernel="$(uname -r 2>/dev/null || echo 'Unknown')"
-    arch="$(uname -m 2>/dev/null || echo 'Unknown')"
-    hostname="$(hostname -s 2>/dev/null || echo 'Unknown')"
-    cpu_model="$(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2 | xargs || echo 'Unknown')"
-    mem_total="$(free -h 2>/dev/null | awk '/^Mem:/{print $2}' || echo '?')"
-    mem_free="$(free -h 2>/dev/null | awk '/^Mem:/{print $7}' || echo '?')"
-    ip_addr="$(hostname -I 2>/dev/null | awk '{print $1}' || echo 'Unknown')"
+        os_name="$(. /etc/os-release 2>/dev/null && echo "${NAME:-Unknown}" || echo 'Unknown')"
+        os_version="$(. /etc/os-release 2>/dev/null && echo "${VERSION_ID:-?}" || echo '?')"
+        kernel="$(uname -r 2>/dev/null || echo 'Unknown')"
+        arch="$(uname -m 2>/dev/null || echo 'Unknown')"
+        hostname="$(hostname -s 2>/dev/null || echo 'Unknown')"
+        cpu_model="$(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2 | xargs || echo 'Unknown')"
+        mem_total="$(free -h 2>/dev/null | awk '/^Mem:/{print $2}' || echo '?')"
+        mem_free="$(free -h 2>/dev/null | awk '/^Mem:/{print $7}' || echo '?')"
+        ip_addr="$(hostname -I 2>/dev/null | awk '{print $1}' || echo 'Unknown')"
 
-    printf "  ${UI_C_BORDER}╭──────────────────────────────────────────────────────╮${UI_C_RESET}\n"
-    printf "  ${UI_C_BORDER}│${UI_C_RESET} ${UI_C_PRIMARY}${UI_C_BOLD}  系统信息${UI_C_RESET}%47s${UI_C_BORDER}│${UI_C_RESET}\n" ''
-    printf "  ${UI_C_BORDER}├──────────────────────────────────────────────────────┤${UI_C_RESET}\n"
-    _ui_info_row "  操作系统" "${os_name} ${os_version}"
-    _ui_info_row "  内核"     "${kernel}"
-    _ui_info_row "  架构"     "${arch}"
-    _ui_info_row "  主机名"   "${hostname}"
-    _ui_info_row "  CPU"      "${cpu_model:0:38}"
-    _ui_info_row "  内存"     "${mem_free} 可用 / ${mem_total} 总计"
-    _ui_info_row "  IP 地址"  "${ip_addr}"
-    _ui_info_row "  框架作者" "aisaniya"
-    printf "  ${UI_C_BORDER}╰──────────────────────────────────────────────────────╯${UI_C_RESET}\n\n"
+        printf "  ${UI_C_BORDER}╭──────────────────────────────────────────────────────╮${UI_C_RESET}\n"
+        printf "  ${UI_C_BORDER}│${UI_C_RESET} ${UI_C_PRIMARY}${UI_C_BOLD}  系统信息${UI_C_RESET}%47s${UI_C_BORDER}│${UI_C_RESET}\n" ''
+        printf "  ${UI_C_BORDER}├──────────────────────────────────────────────────────┤${UI_C_RESET}\n"
+        _ui_info_row "  操作系统" "${os_name} ${os_version}"
+        _ui_info_row "  内核"     "${kernel}"
+        _ui_info_row "  架构"     "${arch}"
+        _ui_info_row "  主机名"   "${hostname}"
+        _ui_info_row "  CPU"      "${cpu_model:0:38}"
+        _ui_info_row "  内存"     "${mem_free} 可用 / ${mem_total} 总计"
+        _ui_info_row "  IP 地址"  "${ip_addr}"
+        _ui_info_row "  框架作者" "aisaniya"
+        printf "  ${UI_C_BORDER}╰──────────────────────────────────────────────────────╯${UI_C_RESET}\n\n"
+    } >&2
 }
 
 # =============================================================================
@@ -304,61 +308,65 @@ ui_system_info() {
 # 内部：渲染所有菜单行（仅行，不含外框，支持中英文自适应对齐）
 # 参数: $1=当前选中索引  $2=items数组名（nameref）
 _ui_render_menu_items() {
-    local sel="$1"
-    local -n __items="$2"
-    local i=0
+    {
+        local sel="$1"
+        local -n __items="$2"
+        local i=0
 
-    for entry in "${__items[@]}"; do
-        # entry 格式: "value:图标 显示标签" 或 "value:显示标签"
-        local label="${entry#*:}"
-        local label_len
-        label_len="$(_ui_string_width "${label}")"
+        for entry in "${__items[@]}"; do
+            # entry 格式: "value:图标 显示标签" 或 "value:显示标签"
+            local label="${entry#*:}"
+            local label_len
+            label_len="$(_ui_string_width "${label}")"
 
-        if (( i == sel )); then
-            # 高亮行：光标 (❯) 占 2 字符，左侧 1 空格，右侧 2 空格
-            local pad=$(( UI_MENU_WIDTH - 7 - label_len ))
-            (( pad < 0 )) && pad=0
-            printf "${UI_C_BORDER}│${UI_C_RESET}${UI_C_SEL_BG} ${UI_C_SEL_FG}${UI_C_BOLD}${UI_ICON_CURSOR} %s%*s${UI_C_RESET}${UI_C_SEL_BG}  ${UI_C_RESET}${UI_C_BORDER}│${UI_C_RESET}\n" \
-                "${label}" "${pad}" ''
-        else
-            # 普通行：左侧 5 空格缩进，右侧 2 空格
-            local pad=$(( UI_MENU_WIDTH - 8 - label_len ))
-            (( pad < 0 )) && pad=0
-            printf "${UI_C_BORDER}│${UI_C_RESET}   ${UI_C_MUTED}  %s%*s${UI_C_RESET}  ${UI_C_BORDER}│${UI_C_RESET}\n" \
-                "${label}" "${pad}" ''
-        fi
-        (( i++ ))
-    done
+            if (( i == sel )); then
+                # 高亮行：光标 (❯) 占 2 字符，左侧 1 空格，右侧 2 空格
+                local pad=$(( UI_MENU_WIDTH - 7 - label_len ))
+                (( pad < 0 )) && pad=0
+                printf "${UI_C_BORDER}│${UI_C_RESET}${UI_C_SEL_BG} ${UI_C_SEL_FG}${UI_C_BOLD}${UI_ICON_CURSOR} %s%*s${UI_C_RESET}${UI_C_SEL_BG}  ${UI_C_RESET}${UI_C_BORDER}│${UI_C_RESET}\n" \
+                    "${label}" "${pad}" ''
+            else
+                # 普通行：左侧 5 空格缩进，右侧 2 空格
+                local pad=$(( UI_MENU_WIDTH - 8 - label_len ))
+                (( pad < 0 )) && pad=0
+                printf "${UI_C_BORDER}│${UI_C_RESET}   ${UI_C_MUTED}  %s%*s${UI_C_RESET}  ${UI_C_BORDER}│${UI_C_RESET}\n" \
+                    "${label}" "${pad}" ''
+            fi
+            (( i++ ))
+        done
+    } >&2
 }
 
 # 内部：完整绘制单选菜单（框 + 标题 + 行 + 提示）
 # 参数: $1=标题  $2=当前选中索引  $3=items数组名
 _ui_draw_menu() {
-    local title="$1"
-    local sel="$2"
-    local arr_name="$3"
-    local -n __draw_items="${arr_name}"
+    {
+        local title="$1"
+        local sel="$2"
+        local arr_name="$3"
+        local -n __draw_items="${arr_name}"
 
-    _ui_hline "${UI_BOX_TL}" "${UI_BOX_H}" "${UI_BOX_TR}" "${UI_MENU_WIDTH}"
+        _ui_hline "${UI_BOX_TL}" "${UI_BOX_H}" "${UI_BOX_TR}" "${UI_MENU_WIDTH}"
 
-    # 标题行
-    local centered_title
-    centered_title="$(_ui_center "${title}" "$(( UI_MENU_WIDTH - 4 ))")"
-    printf "${UI_C_BORDER}│${UI_C_RESET} ${UI_C_TITLE}${UI_C_BOLD}%s${UI_C_RESET} ${UI_C_BORDER}│${UI_C_RESET}\n" \
-        "${centered_title}"
+        # 标题行
+        local centered_title
+        centered_title="$(_ui_center "${title}" "$(( UI_MENU_WIDTH - 4 ))")"
+        printf "${UI_C_BORDER}│${UI_C_RESET} ${UI_C_TITLE}${UI_C_BOLD}%s${UI_C_RESET} ${UI_C_BORDER}│${UI_C_RESET}\n" \
+            "${centered_title}"
 
-    _ui_hline "${UI_BOX_ML}" "${UI_BOX_H}" "${UI_BOX_MR}" "${UI_MENU_WIDTH}"
-    _ui_empty_row
-    _ui_render_menu_items "${sel}" "${arr_name}"
-    _ui_empty_row
-    _ui_hline "${UI_BOX_ML}" "${UI_BOX_H}" "${UI_BOX_MR}" "${UI_MENU_WIDTH}"
+        _ui_hline "${UI_BOX_ML}" "${UI_BOX_H}" "${UI_BOX_MR}" "${UI_MENU_WIDTH}"
+        _ui_empty_row
+        _ui_render_menu_items "${sel}" "${arr_name}"
+        _ui_empty_row
+        _ui_hline "${UI_BOX_ML}" "${UI_BOX_H}" "${UI_BOX_MR}" "${UI_MENU_WIDTH}"
 
         # 操作提示行（增加 Home/End/PgUp/PgDn 提示）
         local hint="  ↑/k 上移  ↓/j 下移  g 首行  G 末行  Enter 确认  q 退出"
         printf "${UI_C_BORDER}│${UI_C_RESET}${UI_C_MUTED}%-*s${UI_C_RESET}${UI_C_BORDER}│${UI_C_RESET}\n" \
-            "$(( UI_MENU_WIDTH - 2 ))" "${hint}" >&2
+            "$(( UI_MENU_WIDTH - 2 ))" "${hint}"
 
         _ui_hline "${UI_BOX_BL}" "${UI_BOX_H}" "${UI_BOX_BR}" "${UI_MENU_WIDTH}"
+    } >&2
 }
 
 # 公共 API：方向键单选菜单
@@ -483,69 +491,71 @@ _ui_render_checklist_items() {
 # 内部：完整绘制复选列表框
 # 参数: $1=标题 $2=当前光标 $3=checked数组名 $4=items数组名 $5=上次光标（可选，-1表示全量重绘）$6=是否仅重绘当前行
 _ui_draw_checklist() {
-    local title="$1"
-    local cur="$2"
-    local chk_name="$3"
-    local items_name="$4"
-    local prev_cur="${5:--1}"
-    local only_rows="${6:-false}"   # true=仅重绘变化的行，false=全量重绘
-    local -n __dcl_items="${items_name}"
-    local total="${#__dcl_items[@]}"
-    # 底部 footer 占用的行数（空行+分隔线+图例+提示+底部边框）
-    local footer_lines=5
-    # header 占用的行数（上边框+标题+分隔线+空行）
-    local header_lines=4
+    {
+        local title="$1"
+        local cur="$2"
+        local chk_name="$3"
+        local items_name="$4"
+        local prev_cur="${5:--1}"
+        local only_rows="${6:-false}"   # true=仅重绘变化的行，false=全量重绘
+        local -n __dcl_items="${items_name}"
+        local total="${#__dcl_items[@]}"
+        # 底部 footer 占用的行数（空行+分隔线+图例+提示+底部边框）
+        local footer_lines=5
+        # header 占用的行数（上边框+标题+分隔线+空行）
+        local header_lines=4
 
-    # 增量重绘模式：只更新变化的行
-    if (( prev_cur >= 0 )) && [[ "${only_rows}" == "true" ]]; then
-        local bottom_offset
+        # 增量重绘模式：只更新变化的行
+        if (( prev_cur >= 0 )) && [[ "${only_rows}" == "true" ]]; then
+            local bottom_offset
 
-        # 上一个选中行 → 切换到非选中状态
-        if (( prev_cur < total )); then
-            bottom_offset=$(( header_lines + (total - 1 - prev_cur) + footer_lines ))
-            printf "\033[%dA" "${bottom_offset}" >&2
-            printf "\r" >&2
-            _ui_draw_checklist_row "${prev_cur}" 0 "${items_name}" "${chk_name}"
+            # 上一个选中行 → 切换到非选中状态
+            if (( prev_cur < total )); then
+                bottom_offset=$(( header_lines + (total - 1 - prev_cur) + footer_lines ))
+                printf "\033[%dA" "${bottom_offset}"
+                printf "\r"
+                _ui_draw_checklist_row "${prev_cur}" 0 "${items_name}" "${chk_name}"
+            fi
+
+            # 当前选中行 → 切换到选中状态
+            if (( cur < total )); then
+                bottom_offset=$(( header_lines + (total - 1 - cur) + footer_lines ))
+                printf "\033[%dA" "${bottom_offset}"
+                printf "\r"
+                _ui_draw_checklist_row "${cur}" 1 "${items_name}" "${chk_name}"
+            fi
+
+            # 返回到菜单底部
+            printf "\033[%dB" "$(( header_lines + (total - 1 - cur) + footer_lines - 1 ))"
+            return
         fi
 
-        # 当前选中行 → 切换到选中状态
-        if (( cur < total )); then
-            bottom_offset=$(( header_lines + (total - 1 - cur) + footer_lines ))
-            printf "\033[%dA" "${bottom_offset}" >&2
-            printf "\r" >&2
-            _ui_draw_checklist_row "${cur}" 1 "${items_name}" "${chk_name}"
-        fi
+        # 全量重绘模式
+        _ui_hline "${UI_BOX_TL}" "${UI_BOX_H}" "${UI_BOX_TR}" "${UI_MENU_WIDTH}"
 
-        # 返回到菜单底部
-        printf "\033[%dB" "$(( header_lines + (total - 1 - cur) + footer_lines - 1 ))" >&2
-        return
-    fi
+        local centered_title
+        centered_title="$(_ui_center "${title}" "$(( UI_MENU_WIDTH - 4 ))")"
+        printf "${UI_C_BORDER}│${UI_C_RESET} ${UI_C_TITLE}${UI_C_BOLD}%s${UI_C_RESET} ${UI_C_BORDER}│${UI_C_RESET}\n" \
+            "${centered_title}"
 
-    # 全量重绘模式
-    _ui_hline "${UI_BOX_TL}" "${UI_BOX_H}" "${UI_BOX_TR}" "${UI_MENU_WIDTH}"
+        _ui_hline "${UI_BOX_ML}" "${UI_BOX_H}" "${UI_BOX_MR}" "${UI_MENU_WIDTH}"
+        _ui_empty_row
+        _ui_render_checklist_items "${cur}" "${chk_name}" "${items_name}"
+        _ui_empty_row
+        _ui_hline "${UI_BOX_ML}" "${UI_BOX_H}" "${UI_BOX_MR}" "${UI_MENU_WIDTH}"
 
-    local centered_title
-    centered_title="$(_ui_center "${title}" "$(( UI_MENU_WIDTH - 4 ))")"
-    printf "${UI_C_BORDER}│${UI_C_RESET} ${UI_C_TITLE}${UI_C_BOLD}%s${UI_C_RESET} ${UI_C_BORDER}│${UI_C_RESET}\n" \
-        "${centered_title}" >&2
+        # 状态图例
+        local legend="  ${UI_C_INSTALLED}✓ 已安装${UI_C_RESET}  ${UI_C_NOT_INSTALLED}○ 未安装${UI_C_RESET}  ${UI_C_ACCENT}● 已选中${UI_C_RESET}"
+        printf "${UI_C_BORDER}│${UI_C_RESET}${UI_C_MUTED}%-*s${UI_C_RESET}${UI_C_BORDER}│${UI_C_RESET}\n" \
+            "$(( UI_MENU_WIDTH - 2 ))" "${legend}"
 
-    _ui_hline "${UI_BOX_ML}" "${UI_BOX_H}" "${UI_BOX_MR}" "${UI_MENU_WIDTH}"
-    _ui_empty_row
-    _ui_render_checklist_items "${cur}" "${chk_name}" "${items_name}"
-    _ui_empty_row
-    _ui_hline "${UI_BOX_ML}" "${UI_BOX_H}" "${UI_BOX_MR}" "${UI_MENU_WIDTH}"
+        # 操作提示（含 Tab=选择, q/◄=返回）
+        local hint="  ↑↓/jk 移动  Space/Tab 选择  A 全选  N 清空  Enter 确认  q/◄ 返回"
+        printf "${UI_C_BORDER}│${UI_C_RESET}${UI_C_MUTED}%-*s${UI_C_RESET}${UI_C_BORDER}│${UI_C_RESET}\n" \
+            "$(( UI_MENU_WIDTH - 2 ))" "${hint}"
 
-    # 状态图例
-    local legend="  ${UI_C_INSTALLED}✓ 已安装${UI_C_RESET}  ${UI_C_NOT_INSTALLED}○ 未安装${UI_C_RESET}  ${UI_C_ACCENT}● 已选中${UI_C_RESET}"
-    printf "${UI_C_BORDER}│${UI_C_RESET}${UI_C_MUTED}%-*s${UI_C_RESET}${UI_C_BORDER}│${UI_C_RESET}\n" \
-        "$(( UI_MENU_WIDTH - 2 ))" "${legend}" >&2
-
-    # 操作提示（含 Tab=选择, q/◄=返回）
-    local hint="  ↑↓/jk 移动  Space/Tab 选择  A 全选  N 清空  Enter 确认  q/◄ 返回"
-    printf "${UI_C_BORDER}│${UI_C_RESET}${UI_C_MUTED}%-*s${UI_C_RESET}${UI_C_BORDER}│${UI_C_RESET}\n" \
-        "$(( UI_MENU_WIDTH - 2 ))" "${hint}" >&2
-
-    _ui_hline "${UI_BOX_BL}" "${UI_BOX_H}" "${UI_BOX_BR}" "${UI_MENU_WIDTH}"
+        _ui_hline "${UI_BOX_BL}" "${UI_BOX_H}" "${UI_BOX_BR}" "${UI_MENU_WIDTH}"
+    } >&2
 }
 
 # 公共 API：多选复选列表。支持增量重绘
@@ -631,40 +641,42 @@ ui_checklist() {
 
 # 内部：绘制确认框
 _ui_draw_confirm() {
-    local message="$1"
-    local sel="$2"    # 0=Yes  1=No
+    {
+        local message="$1"
+        local sel="$2"    # 0=Yes  1=No
 
-    _ui_hline "${UI_BOX_TL}" "${UI_BOX_H}" "${UI_BOX_TR}" "${UI_MENU_WIDTH}"
-    _ui_empty_row
+        _ui_hline "${UI_BOX_TL}" "${UI_BOX_H}" "${UI_BOX_TR}" "${UI_MENU_WIDTH}"
+        _ui_empty_row
 
-    # 消息行（可多行）
-    printf "${UI_C_BORDER}│${UI_C_RESET}  ${UI_C_WHITE}%-*s${UI_C_RESET}  ${UI_C_BORDER}│${UI_C_RESET}\n" \
-        "$(( UI_MENU_WIDTH - 6 ))" "${message}"
+        # 消息行（可多行）
+        printf "${UI_C_BORDER}│${UI_C_RESET}  ${UI_C_WHITE}%-*s${UI_C_RESET}  ${UI_C_BORDER}│${UI_C_RESET}\n" \
+            "$(( UI_MENU_WIDTH - 6 ))" "${message}"
 
-    _ui_empty_row
-    _ui_hline "${UI_BOX_ML}" "${UI_BOX_H}" "${UI_BOX_MR}" "${UI_MENU_WIDTH}"
-    _ui_empty_row
+        _ui_empty_row
+        _ui_hline "${UI_BOX_ML}" "${UI_BOX_H}" "${UI_BOX_MR}" "${UI_MENU_WIDTH}"
+        _ui_empty_row
 
-    # Yes / No 按钮
-    local yes_btn no_btn
-    if (( sel == 0 )); then
-        yes_btn="${UI_C_PRIMARY_BG}${UI_C_BOLD}  ${UI_ICON_YES}  是  ${UI_C_RESET}"
-        no_btn="${UI_C_MUTED}  ${UI_ICON_NO}  否  ${UI_C_RESET}"
-    else
-        yes_btn="${UI_C_MUTED}  ${UI_ICON_NO}  是  ${UI_C_RESET}"
-        no_btn="${UI_C_ERR}${UI_C_PRIMARY_BG}${UI_C_BOLD}  ${UI_ICON_YES}  否  ${UI_C_RESET}"
-    fi
+        # Yes / No 按钮
+        local yes_btn no_btn
+        if (( sel == 0 )); then
+            yes_btn="${UI_C_PRIMARY_BG}${UI_C_BOLD}  ${UI_ICON_YES}  是  ${UI_C_RESET}"
+            no_btn="${UI_C_MUTED}  ${UI_ICON_NO}  否  ${UI_C_RESET}"
+        else
+            yes_btn="${UI_C_MUTED}  ${UI_ICON_NO}  是  ${UI_C_RESET}"
+            no_btn="${UI_C_ERR}${UI_C_PRIMARY_BG}${UI_C_BOLD}  ${UI_ICON_YES}  否  ${UI_C_RESET}"
+        fi
 
-    printf "${UI_C_BORDER}│${UI_C_RESET}          %s      %s%*s${UI_C_BORDER}│${UI_C_RESET}\n" \
-        "${yes_btn}" "${no_btn}" 12 ''
+        printf "${UI_C_BORDER}│${UI_C_RESET}          %s      %s%*s${UI_C_BORDER}│${UI_C_RESET}\n" \
+            "${yes_btn}" "${no_btn}" 12 ''
 
-    _ui_empty_row
-    _ui_hline "${UI_BOX_ML}" "${UI_BOX_H}" "${UI_BOX_MR}" "${UI_MENU_WIDTH}"
+        _ui_empty_row
+        _ui_hline "${UI_BOX_ML}" "${UI_BOX_H}" "${UI_BOX_MR}" "${UI_MENU_WIDTH}"
 
-    local hint="  ←/→ 切换  Enter 确认"
-    printf "${UI_C_BORDER}│${UI_C_RESET}${UI_C_MUTED}%-*s${UI_C_RESET}${UI_C_BORDER}│${UI_C_RESET}\n" \
-        "$(( UI_MENU_WIDTH - 2 ))" "${hint}"
-    _ui_hline "${UI_BOX_BL}" "${UI_BOX_H}" "${UI_BOX_BR}" "${UI_MENU_WIDTH}"
+        local hint="  ←/→ 切换  Enter 确认"
+        printf "${UI_C_BORDER}│${UI_C_RESET}${UI_C_MUTED}%-*s${UI_C_RESET}${UI_C_BORDER}│${UI_C_RESET}\n" \
+            "$(( UI_MENU_WIDTH - 2 ))" "${hint}"
+        _ui_hline "${UI_BOX_BL}" "${UI_BOX_H}" "${UI_BOX_BR}" "${UI_MENU_WIDTH}"
+    } >&2
 }
 
 # 公共 API：确认框
@@ -720,13 +732,13 @@ ui_input() {
     local input="${default}"
 
     _ui_cursor_show
-    printf '\n'
+    printf '\n' >&2
     _ui_hline "${UI_BOX_TL}" "${UI_BOX_H}" "${UI_BOX_TR}" "${UI_MENU_WIDTH}"
     printf "${UI_C_BORDER}│${UI_C_RESET}  ${UI_C_WHITE}${UI_C_BOLD}%-*s${UI_C_RESET}  ${UI_C_BORDER}│${UI_C_RESET}\n" \
-        "$(( UI_MENU_WIDTH - 6 ))" "${prompt}"
+        "$(( UI_MENU_WIDTH - 6 ))" "${prompt}" >&2
     _ui_hline "${UI_BOX_ML}" "${UI_BOX_H}" "${UI_BOX_MR}" "${UI_MENU_WIDTH}"
 
-    printf "${UI_C_BORDER}│${UI_C_RESET}  ${UI_C_PRIMARY}❯ ${UI_C_RESET}"
+    printf "${UI_C_BORDER}│${UI_C_RESET}  ${UI_C_PRIMARY}❯ ${UI_C_RESET}" >&2
     # 读取一行（支持退格）
     IFS= read -re -i "${default}" -p "" input 2>/dev/null || {
         IFS= read -re input
